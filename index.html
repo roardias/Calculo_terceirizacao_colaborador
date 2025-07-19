@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Custo de Terceirização</title>
+    <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-layout">
+                <div class="header-logo">
+                    <img src="logo_alldax.png" alt="Alldax Logo" class="logo-image">
+                </div>
+                <div class="header-text">
+                    <h1>Calculadora de Custo de Terceirização</h1>
+                    <p>Sistema Profissional para Cálculo de Propostas Comerciais</p>
+                </div>
+                <div class="header-spacer"></div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- BLOCO 1: INFORMAÇÕES DO CLIENTE -->
+        <section class="calculation-block fade-in" id="bloco-cliente">
+            <h2 class="block-title">
+                <span class="block-number">1</span>
+                Informações do Cliente
+            </h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="cnpj" class="form-label">CNPJ *</label>
+                    <input 
+                        type="text" 
+                        id="cnpj" 
+                        name="cnpj" 
+                        class="form-input" 
+                        placeholder="00.000.000/0000-00"
+                        maxlength="18"
+                        required
+                    >
+                    <div class="validation-message" id="cnpj-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="nomeCliente" class="form-label">Nome do Cliente *</label>
+                    <div class="input-with-loading">
+                        <input 
+                            type="text" 
+                            id="nomeCliente" 
+                            name="nomeCliente" 
+                            class="form-input" 
+                            placeholder="Nome será preenchido automaticamente"
+                            readonly
+                            required
+                        >
+                        <div class="loading-indicator" id="cnpj-loading" style="display: none;">
+                            <span class="loading-spinner"></span>
+                            <span class="loading-text">Buscando...</span>
+                        </div>
+                    </div>
+                    <div class="validation-message" id="nomeCliente-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="responsavelProposta" class="form-label">Responsável pela Proposta *</label>
+                    <input 
+                        type="text" 
+                        id="responsavelProposta" 
+                        name="responsavelProposta" 
+                        class="form-input" 
+                        placeholder="Nome de quem está preenchendo"
+                        required
+                    >
+                    <div class="validation-message" id="responsavelProposta-validation"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOCO 2: IDENTIFICAÇÃO DO SERVIÇO -->
+        <section class="calculation-block fade-in" id="bloco-servico">
+            <h2 class="block-title">
+                <span class="block-number">2</span>
+                Identificação do Serviço
+            </h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="cargo" class="form-label">Cargo *</label>
+                    <input 
+                        type="text" 
+                        id="cargo" 
+                        name="cargo" 
+                        class="form-input" 
+                        placeholder="Ex: Analista de Sistemas Jr."
+                        required
+                    >
+                    <div class="validation-message" id="cargo-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="regimeTributario" class="form-label">Regime Tributário da Empresa *</label>
+                    <select 
+                        id="regimeTributario" 
+                        name="regimeTributario" 
+                        class="form-input" 
+                        required
+                    >
+                        <option value="">Selecione o regime</option>
+                        <option value="simples">Simples Nacional</option>
+                        <option value="lucro">Lucro Presumido / Real</option>
+                    </select>
+                    <div class="validation-message" id="regimeTributario-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="quantidade" class="form-label">Quantidade *</label>
+                    <input 
+                        type="number" 
+                        id="quantidade" 
+                        name="quantidade" 
+                        class="form-input" 
+                        placeholder="1"
+                        min="1"
+                        value="1"
+                        required
+                    >
+                    <div class="validation-message" id="quantidade-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="salarioBruto" class="form-label">Salário Bruto do Colaborador *</label>
+                    <input 
+                        type="text" 
+                        id="salarioBruto" 
+                        name="salarioBruto" 
+                        class="form-input" 
+                        placeholder="R$ 0,00"
+                        required
+                    >
+                    <div class="validation-message" id="salarioBruto-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="dataBase" class="form-label">Data Base *</label>
+                    <input 
+                        type="date" 
+                        id="dataBase" 
+                        name="dataBase" 
+                        class="form-input" 
+                        required
+                    >
+                    <div class="validation-message" id="dataBase-validation"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOCO 3: ENCARGOS E BENEFÍCIOS -->
+        <section class="calculation-block fade-in" id="bloco-encargos">
+            <h2 class="block-title">
+                <span class="block-number">3</span>
+                Encargos e Benefícios Anuais, Mensais e Diários
+                <div class="title-total">
+                    <span class="total-label">Total:</span>
+                    <input type="text" id="totalBloco3" class="total-input" readonly value="R$ 0,00">
+                </div>
+            </h2>
+            
+            <!-- SUBMÓDULO 3.1 -->
+            <div class="submodule">
+                <h3 class="submodule-title">
+                    3.1 - 13º Salário e Férias
+                    <div class="subtitle-total">
+                        <span class="total-label">Total:</span>
+                        <input type="text" id="totalSubmodulo31" class="subtotal-input" readonly value="R$ 0,00">
+                    </div>
+                </h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">13º (Décimo-terceiro) Salário</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">Salário ÷ 12</span>
+                            <input type="text" id="decimoTerceiro" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">1/3 Férias Proporcionais</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">Salário ÷ 12 ÷ 3</span>
+                            <input type="text" id="adicionalFerias" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Férias Proporcionais</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">Salário ÷ 12</span>
+                            <input type="text" id="feriasProporcionais" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBMÓDULO 3.2 -->
+            <div class="submodule" id="submodulo-encargos">
+                <h3 class="submodule-title">
+                    3.2 - Encargos Sociais
+                    <div class="subtitle-total">
+                        <span class="total-label">Total:</span>
+                        <input type="text" id="totalSubmodulo32" class="subtotal-input" readonly value="R$ 0,00">
+                    </div>
+                </h3>
+                
+                <div class="form-grid">
+                    <div class="form-group" id="grupo-inss" style="display: none;">
+                        <label class="form-label">INSS</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">20,00%</span>
+                            <input type="text" id="inss" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="grupo-salario-educacao" style="display: none;">
+                        <label class="form-label">Salário Educação</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">2,50%</span>
+                            <input type="text" id="salarioEducacao" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="grupo-sat" style="display: none;">
+                        <label class="form-label">SAT (Seguro Acidente de Trabalho)</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">2,37%</span>
+                            <input type="text" id="sat" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="grupo-sesc-sesi" style="display: none;">
+                        <label class="form-label">SESC ou SESI</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">1,50%</span>
+                            <input type="text" id="sescSesi" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="grupo-senai-senac" style="display: none;">
+                        <label class="form-label">SENAI - SENAC</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">1,00%</span>
+                            <input type="text" id="senaiSenac" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="grupo-sebrae" style="display: none;">
+                        <label class="form-label">SEBRAE</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">0,60%</span>
+                            <input type="text" id="sebrae" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="grupo-incra" style="display: none;">
+                        <label class="form-label">INCRA</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">0,20%</span>
+                            <input type="text" id="incra" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">FGTS</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">8,00%</span>
+                            <input type="text" id="fgts" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBMÓDULO 3.3 -->
+            <div class="submodule">
+                <h3 class="submodule-title">
+                    3.3 - Transporte e Auxílio-Refeição
+                    <div class="subtitle-total">
+                        <span class="total-label">Total:</span>
+                        <input type="text" id="totalSubmodulo33" class="subtotal-input" readonly value="R$ 0,00">
+                    </div>
+                </h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="valorPassagemDiaria" class="form-label">Valor Passagem Diária (Ida e Volta) *</label>
+                        <input 
+                            type="text" 
+                            id="valorPassagemDiaria" 
+                            name="valorPassagemDiaria" 
+                            class="form-input" 
+                            placeholder="R$ 0,00"
+                            required
+                        >
+                        <div class="validation-message" id="valorPassagemDiaria-validation"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Total Mensal (23 dias)</label>
+                        <input type="text" id="transporteTotalMensal" class="form-input calculation-result" readonly value="R$ 0,00">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Desconto Funcionário (6% do Salário Bruto)</label>
+                        <input type="text" id="descontoFuncionario" class="form-input calculation-result" readonly value="R$ 0,00">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="auxilioRefeicaoValorDiario" class="form-label">Auxílio-Refeição - Valor Diário *</label>
+                        <input 
+                            type="text" 
+                            id="auxilioRefeicaoValorDiario" 
+                            name="auxilioRefeicaoValorDiario" 
+                            class="form-input" 
+                            placeholder="R$ 0,00"
+                            required
+                        >
+                        <div class="validation-message" id="auxilioRefeicaoValorDiario-validation"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Auxílio-Refeição - Total Mensal (23 dias)</label>
+                        <input type="text" id="auxilioRefeicaoTotalMensal" class="form-input calculation-result" readonly value="R$ 0,00">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOCO 4: PROVISÃO PARA RESCISÃO -->
+        <section class="calculation-block fade-in" id="bloco-rescisao">
+            <h2 class="block-title">
+                <span class="block-number">4</span>
+                Provisão para Rescisão
+                <div class="title-total">
+                    <span class="total-label">Total:</span>
+                    <input type="text" id="totalBloco4" class="total-input" readonly value="R$ 0,00">
+                </div>
+            </h2>
+            
+            <!-- SUBMÓDULO 4.1 -->
+            <div class="submodule">
+                <h3 class="submodule-title">
+                    4.1 - Aviso Prévio Indenizado
+                    <div class="subtitle-total">
+                        <span class="total-label">Total:</span>
+                        <input type="text" id="totalSubmodulo41" class="subtotal-input" readonly value="R$ 0,00">
+                    </div>
+                </h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">Aviso Prévio<br>Indenizado</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">Salário ÷ 12</span>
+                            <input type="text" id="avisoPrevioIndenizado" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Incidência do FGTS sobre Aviso Prévio Indenizado</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">8% do Salário</span>
+                            <input type="text" id="fgtsAvisoPrevioIndenizado" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Multa do FGTS sobre Aviso Prévio Indenizado</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">40% do FGTS</span>
+                            <input type="text" id="multaFgtsAvisoPrevioIndenizado" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOCO 5: CUSTOS ADICIONAIS -->
+        <section class="calculation-block fade-in" id="bloco-custos-adicionais">
+            <h2 class="block-title">
+                <span class="block-number">5</span>
+                Custos Adicionais
+                <div class="title-total">
+                    <span class="total-label">Total:</span>
+                    <input type="text" id="totalBloco5" class="total-input" readonly value="R$ 0,00">
+                </div>
+            </h2>
+            
+            <div class="custos-adicionais-grid">
+                <!-- Linha 1 -->
+                <div class="form-group">
+                    <label for="tipoCusto1" class="form-label">Tipo de Custo 1</label>
+                    <input 
+                        type="text" 
+                        id="tipoCusto1" 
+                        name="tipoCusto1" 
+                        class="form-input" 
+                        placeholder="Ex: Plano de Saúde"
+                        list="sugestoesCustos"
+                    >
+                    <div class="validation-message" id="tipoCusto1-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="valorCusto1" class="form-label">Valor 1</label>
+                    <input 
+                        type="text" 
+                        id="valorCusto1" 
+                        name="valorCusto1" 
+                        class="form-input" 
+                        placeholder="R$ 0,00"
+                    >
+                    <div class="validation-message" id="valorCusto1-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tipoCusto2" class="form-label">Tipo de Custo 2</label>
+                    <input 
+                        type="text" 
+                        id="tipoCusto2" 
+                        name="tipoCusto2" 
+                        class="form-input" 
+                        placeholder="Ex: Plano Odonto"
+                        list="sugestoesCustos"
+                    >
+                    <div class="validation-message" id="tipoCusto2-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="valorCusto2" class="form-label">Valor 2</label>
+                    <input 
+                        type="text" 
+                        id="valorCusto2" 
+                        name="valorCusto2" 
+                        class="form-input" 
+                        placeholder="R$ 0,00"
+                    >
+                    <div class="validation-message" id="valorCusto2-validation"></div>
+                </div>
+
+                <!-- Linha 2 -->
+                <div class="form-group">
+                    <label for="tipoCusto3" class="form-label">Tipo de Custo 3</label>
+                    <input 
+                        type="text" 
+                        id="tipoCusto3" 
+                        name="tipoCusto3" 
+                        class="form-input" 
+                        placeholder="Ex: Uniforme"
+                        list="sugestoesCustos"
+                    >
+                    <div class="validation-message" id="tipoCusto3-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="valorCusto3" class="form-label">Valor 3</label>
+                    <input 
+                        type="text" 
+                        id="valorCusto3" 
+                        name="valorCusto3" 
+                        class="form-input" 
+                        placeholder="R$ 0,00"
+                    >
+                    <div class="validation-message" id="valorCusto3-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="tipoCusto4" class="form-label">Tipo de Custo 4</label>
+                    <input 
+                        type="text" 
+                        id="tipoCusto4" 
+                        name="tipoCusto4" 
+                        class="form-input" 
+                        placeholder="Ex: Total Pass"
+                        list="sugestoesCustos"
+                    >
+                    <div class="validation-message" id="tipoCusto4-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="valorCusto4" class="form-label">Valor 4</label>
+                    <input 
+                        type="text" 
+                        id="valorCusto4" 
+                        name="valorCusto4" 
+                        class="form-input" 
+                        placeholder="R$ 0,00"
+                    >
+                    <div class="validation-message" id="valorCusto4-validation"></div>
+                </div>
+
+                <!-- Linha 3 -->
+                <div class="form-group">
+                    <label for="tipoCusto5" class="form-label">Tipo de Custo 5</label>
+                    <input 
+                        type="text" 
+                        id="tipoCusto5" 
+                        name="tipoCusto5" 
+                        class="form-input" 
+                        placeholder="Ex: Cesta Básica"
+                        list="sugestoesCustos"
+                    >
+                    <div class="validation-message" id="tipoCusto5-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="valorCusto5" class="form-label">Valor 5</label>
+                    <input 
+                        type="text" 
+                        id="valorCusto5" 
+                        name="valorCusto5" 
+                        class="form-input" 
+                        placeholder="R$ 0,00"
+                    >
+                    <div class="validation-message" id="valorCusto5-validation"></div>
+                </div>
+
+                <!-- Campos vazios para manter o grid alinhado -->
+                <div class="form-group" style="visibility: hidden;">
+                    <label class="form-label">-</label>
+                    <input type="text" class="form-input" readonly>
+                </div>
+
+                <div class="form-group" style="visibility: hidden;">
+                    <label class="form-label">-</label>
+                    <input type="text" class="form-input" readonly>
+                </div>
+            </div>
+
+            <!-- Datalist com sugestões de custos -->
+            <datalist id="sugestoesCustos">
+                <option value="Plano de Saúde">
+                <option value="Plano Odonto">
+                <option value="Uniforme">
+                <option value="Total Pass">
+                <option value="Cesta Básica">
+                <option value="Seguro de Vida">
+                <option value="Auxílio Creche">
+                <option value="Auxílio Educação">
+                <option value="Equipamentos de Proteção Individual (EPI)">
+                <option value="Treinamentos e Capacitação">
+            </datalist>
+        </section>
+
+        <!-- BLOCO 6: RESUMO DO CUSTO POR EMPREGADO -->
+        <section class="calculation-block fade-in" id="bloco-resumo">
+            <h2 class="block-title">
+                <span class="block-number">6</span>
+                Resumo do Custo por Empregado
+            </h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">2 - Salário Bruto<br>do Colaborador</label>
+                    <input type="text" id="resumoSalarioBruto" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">3 - Encargos e Benefícios<br>Anuais, Mensais e Diários</label>
+                    <input type="text" id="resumoEncargos" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">4 - Provisão<br>para Rescisão</label>
+                    <input type="text" id="resumoProvisaoRescisao" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">5 - Custos<br>Adicionais</label>
+                    <input type="text" id="resumoCustosAdicionais" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><strong>TOTAL GERAL<br>POR EMPREGADO</strong></label>
+                    <input type="text" id="resumoTotalGeral" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00" style="font-weight: bold; font-size: 1.1rem; border-width: 3px;">
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOCO 7: CUSTOS ADICIONAIS E TRIBUTOS -->
+        <section class="calculation-block fade-in" id="bloco-custos-tributos">
+            <h2 class="block-title">
+                <span class="block-number">7</span>
+                Custos Adicionais e Tributos
+                <div class="title-total">
+                    <span class="total-label">Total:</span>
+                    <input type="text" id="totalBloco7" class="total-input" readonly value="R$ 0,00">
+                </div>
+            </h2>
+            
+            <!-- SUBMÓDULO 7.1 -->
+            <div class="submodule">
+                <h3 class="submodule-title">
+                    7.1 - Custos Adicionais
+                    <div class="subtitle-total">
+                        <span class="total-label">Total:</span>
+                        <input type="text" id="totalSubmodulo71" class="subtotal-input" readonly value="R$ 0,00">
+                    </div>
+                </h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="percentualCustosAdicionais" class="form-label">Percentual de Custos Adicionais *</label>
+                        <input 
+                            type="text" 
+                            id="percentualCustosAdicionais" 
+                            name="percentualCustosAdicionais" 
+                            class="form-input" 
+                            placeholder="0,00%"
+                        >
+                        <div class="validation-message" id="percentualCustosAdicionais-validation"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Valor dos Custos Adicionais</label>
+                        <input type="text" id="valorCustosAdicionais" class="form-input calculation-result" readonly value="R$ 0,00">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SUBMÓDULO 7.2 -->
+            <div class="submodule">
+                <h3 class="submodule-title">
+                    7.2 - Tributos
+                    <div class="subtitle-total">
+                        <span class="total-label">Total:</span>
+                        <input type="text" id="totalSubmodulo72" class="subtotal-input" readonly value="R$ 0,00">
+                    </div>
+                </h3>
+                
+                <!-- TRIBUTOS PARA LUCRO PRESUMIDO/REAL -->
+                <div class="form-grid" id="tributos-lucro-presumido" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">PIS</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">0,59%</span>
+                            <input type="text" id="pis" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">COFINS</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">2,71%</span>
+                            <input type="text" id="cofins" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">ISS</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent">5,00%</span>
+                            <input type="text" id="iss" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TRIBUTOS PARA SIMPLES NACIONAL -->
+                <div class="form-grid" id="tributos-simples-nacional" style="display: none;">
+                    <div class="form-group">
+                        <label for="aliquotaSimplesNacional" class="form-label">Alíquota do Simples Nacional *</label>
+                        <input 
+                            type="text" 
+                            id="aliquotaSimplesNacional" 
+                            name="aliquotaSimplesNacional" 
+                            class="form-input" 
+                            placeholder="0,00%"
+                        >
+                        <div class="validation-message" id="aliquotaSimplesNacional-validation"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Valor do Tributo Simples Nacional</label>
+                        <div class="calculation-display">
+                            <span class="calculation-percent" id="percentSimplesNacional">0,00%</span>
+                            <input type="text" id="tributoSimplesNacional" class="form-input calculation-result" readonly value="R$ 0,00">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOCO 8: MARGEM DE LUCRO -->
+        <section class="calculation-block fade-in" id="bloco-margem-lucro">
+            <h2 class="block-title">
+                <span class="block-number">8</span>
+                Margem de Lucro
+                <div class="title-total">
+                    <span class="total-label">Lucro:</span>
+                    <input type="text" id="valorMargemLucro" class="total-input" readonly value="R$ 0,00">
+                </div>
+            </h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="percentualMargemLucro" class="form-label">Percentual de Margem de Lucro *</label>
+                    <input 
+                        type="text" 
+                        id="percentualMargemLucro" 
+                        name="percentualMargemLucro" 
+                        class="form-input" 
+                        placeholder="0,00%"
+                    >
+                    <div class="validation-message" id="percentualMargemLucro-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Valor Total com Margem</label>
+                    <input type="text" id="valorTotalComMargem" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Base de Cálculo para Tributos</label>
+                    <input type="text" id="baseCalculoTributos" class="form-input calculation-result" readonly value="R$ 0,00">
+                </div>
+            </div>
+        </section>
+
+        <!-- BLOCO 9: RESUMO FINAL -->
+        <section class="calculation-block fade-in" id="bloco-resumo">
+            <h2 class="block-title">
+                <span class="block-number">9</span>
+                Resumo Final
+            </h2>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">2 - Salário Bruto<br>do Colaborador</label>
+                    <input type="text" id="resumoFinalSalarioBruto" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">3 - Encargos e Benefícios<br>Anuais, Mensais e Diários</label>
+                    <input type="text" id="resumoFinalEncargos" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">4 - Provisão<br>para Rescisão</label>
+                    <input type="text" id="resumoFinalProvisaoRescisao" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">5 - Custos<br>Adicionais</label>
+                    <input type="text" id="resumoFinalCustosAdicionais" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">7 - Custos Adicionais<br>e Tributos</label>
+                    <input type="text" id="resumoFinalCustosTributos" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">8 - Margem<br>de Lucro</label>
+                    <input type="text" id="resumoFinalMargemLucro" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><strong>Total por empregado</strong></label>
+                    <input type="text" id="resumoFinalTotalGeral" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00" style="font-weight: bold; font-size: 1.1rem; border-width: 3px;">
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="assets/js/calculadora.js"></script>
+</body>
+</html>
