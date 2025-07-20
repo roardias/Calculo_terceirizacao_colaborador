@@ -2233,6 +2233,39 @@ class FileExporter {
                 if (valorMargemLucroField && valorMargemLucroField.value && valorMargemLucroField.value !== 'R$ 0,00') data['Margem de Lucro'] = valorMargemLucroField.value;
             }
             
+            if (blockNumber === '6') {
+                // Bloco 6 - Resumo do Custo por Empregado - Coletar campos específicos
+                const resumoSalarioBrutoField = document.getElementById('resumoSalarioBruto');
+                const resumoEncargosField = document.getElementById('resumoEncargos');
+                const resumoProvisaoRescisaoField = document.getElementById('resumoProvisaoRescisao');
+                const resumoCustosAdicionaisField = document.getElementById('resumoCustosAdicionais');
+                const resumoTotalGeralField = document.getElementById('resumoTotalGeral');
+                
+                if (resumoSalarioBrutoField && resumoSalarioBrutoField.value && resumoSalarioBrutoField.value !== 'R$ 0,00') {
+                    data['Total Salário Bruto do Colaborador'] = resumoSalarioBrutoField.value;
+                }
+                if (resumoEncargosField && resumoEncargosField.value && resumoEncargosField.value !== 'R$ 0,00') {
+                    data['Total Encargos e Benefícios Anuais, Mensais e Diários'] = resumoEncargosField.value;
+                }
+                if (resumoProvisaoRescisaoField && resumoProvisaoRescisaoField.value && resumoProvisaoRescisaoField.value !== 'R$ 0,00') {
+                    data['Total Provisão para Rescisão'] = resumoProvisaoRescisaoField.value;
+                }
+                if (resumoCustosAdicionaisField && resumoCustosAdicionaisField.value && resumoCustosAdicionaisField.value !== 'R$ 0,00') {
+                    data['Total Benefícios/Despesas Adicionais'] = resumoCustosAdicionaisField.value;
+                }
+                if (resumoTotalGeralField && resumoTotalGeralField.value && resumoTotalGeralField.value !== 'R$ 0,00') {
+                    data['TOTAL GERAL POR EMPREGADO'] = resumoTotalGeralField.value;
+                }
+            }
+            
+            if (blockNumber === '9') {
+                // Bloco 9 - Resumo Final - Coletar total por empregado
+                const resumoFinalTotalGeralField = document.getElementById('resumoFinalTotalGeral');
+                if (resumoFinalTotalGeralField && resumoFinalTotalGeralField.value && resumoFinalTotalGeralField.value !== 'R$ 0,00') {
+                    data['Total por empregado'] = resumoFinalTotalGeralField.value;
+                }
+            }
+            
             // Submódulos (subtotais)
             const submodules = block.querySelectorAll('.submodule');
             submodules.forEach(submodule => {
