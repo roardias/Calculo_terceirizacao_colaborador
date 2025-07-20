@@ -211,9 +211,41 @@ class CalculadoraTerceirizacao {
         const percentageFields = [percentualCustosField, percentualMargemField, aliquotaSimplesField].filter(field => field);
         
         percentageFields.forEach(field => {
+            let lastValue = '';
+            
             field.addEventListener('input', (e) => {
                 let value = e.target.value;
                 
+                // Detectar se o usuário está apagando (valor atual é menor que o anterior)
+                const isDeleting = value.length < lastValue.length;
+                
+                // Se está apagando, permitir e apenas limpar caracteres inválidos
+                if (isDeleting) {
+                    // Remover % se existir, mas manter o resto
+                    value = value.replace('%', '');
+                    
+                    // Se ficou vazio ou só vírgula, permitir
+                    if (value === '' || value === ',') {
+                        e.target.value = value;
+                        lastValue = value;
+                        return;
+                    }
+                    
+                    // Validar se o que sobrou é um número válido
+                    const cleanValue = value.replace(',', '.');
+                    const numericValue = parseFloat(cleanValue);
+                    
+                    if (!isNaN(numericValue) && numericValue >= 0) {
+                        e.target.value = value;
+                    } else {
+                        e.target.value = '';
+                    }
+                    
+                    lastValue = e.target.value;
+                    return;
+                }
+                
+                // Lógica normal para quando está digitando (não apagando)
                 // Remover caracteres inválidos, mantendo apenas números, vírgula e ponto
                 value = value.replace(/[^\d,.]/g, '');
                 
@@ -245,6 +277,29 @@ class CalculadoraTerceirizacao {
                 } else {
                     e.target.value = '';
                 }
+                
+                lastValue = e.target.value;
+            });
+            
+            // Remover % quando o campo recebe foco para facilitar edição
+            field.addEventListener('focus', (e) => {
+                let value = e.target.value;
+                if (value.endsWith('%')) {
+                    e.target.value = value.slice(0, -1);
+                }
+                lastValue = e.target.value;
+            });
+            
+            // Adicionar % de volta quando perde foco, se necessário
+            field.addEventListener('blur', (e) => {
+                let value = e.target.value.trim();
+                if (value && !value.endsWith('%') && value !== ',') {
+                    const numericValue = parseFloat(value.replace(',', '.'));
+                    if (!isNaN(numericValue) && numericValue >= 0 && numericValue <= 100) {
+                        e.target.value = value + '%';
+                    }
+                }
+                lastValue = e.target.value;
             });
         });
     }
