@@ -438,13 +438,57 @@ body {
 
 /* RESPONSIVIDADE PARA SUBMÓDULOS */
 @media (max-width: 768px) {
+    /* Container principal */
+    .container {
+        padding: 1.5rem 1rem;
+    }
+    
+    /* Blocos de cálculo */
+    .calculation-block {
+        padding: 1.5rem 1rem;
+        margin-bottom: 1.5rem;
+        border-radius: 12px;
+    }
+    
+    .custos-adicionais-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .custos-adicionais-grid .form-label {
+        white-space: normal;
+        text-overflow: initial;
+    }
+    
+    /* Submódulos responsivos */
     .submodule {
         padding: 1rem;
         margin-bottom: 1rem;
+        overflow: hidden; /* Evita overflow dos elementos filhos */
+        border-radius: 8px;
     }
     
     .submodule-title {
         font-size: 1rem;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+        margin-bottom: 0.8rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+    }
+    
+    .subtitle-total {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        margin-left: 0;
+    }
+    
+    .subtotal-input {
+        min-width: 80px;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
     }
     
     .calculation-display {
@@ -456,6 +500,80 @@ body {
     .calculation-percent {
         align-self: flex-start;
         min-width: auto;
+        font-size: 0.8rem;
+        padding: 0.4rem 0.6rem;
+    }
+    
+    .calculation-result {
+        width: 100%;
+        min-width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        font-size: 0.9rem;
+        padding: 0.75rem 0.8rem;
+    }
+    
+    /* Grid responsivo para campos */
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    /* Títulos dos blocos responsivos */
+    .block-title {
+        font-size: 1.3rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        text-align: left;
+    }
+    
+    .title-total {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 0.5rem;
+        justify-content: space-between;
+    }
+    
+    .total-input {
+        min-width: 90px;
+        font-size: 0.85rem;
+        padding: 0.35rem 0.6rem;
+    }
+    
+    /* Header responsivo */
+    .header-layout {
+        flex-direction: column;
+        text-align: center;
+        min-height: auto;
+        gap: 1rem;
+    }
+    
+    .header-logo {
+        margin-right: 0;
+        order: 1;
+    }
+    
+    .logo-image {
+        height: 50px;
+        max-width: 150px;
+    }
+    
+    .header-text {
+        order: 2;
+        margin: 0;
+    }
+    
+    .header-spacer {
+        display: none;
+    }
+    
+    .header h1 {
+        font-size: 2rem;
+        margin-bottom: 0.3rem;
+    }
+    
+    .header p {
+        font-size: 1rem;
     }
 }
 
@@ -708,53 +826,5 @@ select.form-input option {
     .custos-adicionais-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 0.8rem;
-    }
-}
-
-@media (max-width: 768px) {
-    .custos-adicionais-grid {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-    
-    .custos-adicionais-grid .form-label {
-        white-space: normal;
-        text-overflow: initial;
-    }
-    
-    /* Header responsivo */
-    .header-layout {
-        flex-direction: column;
-        text-align: center;
-        min-height: auto;
-        gap: 1rem;
-    }
-    
-    .header-logo {
-        margin-right: 0;
-        order: 1;
-    }
-    
-    .logo-image {
-        height: 50px;
-        max-width: 150px;
-    }
-    
-    .header-text {
-        order: 2;
-        margin: 0;
-    }
-    
-    .header-spacer {
-        display: none;
-    }
-    
-    .header h1 {
-        font-size: 2rem;
-        margin-bottom: 0.3rem;
-    }
-    
-    .header p {
-        font-size: 1rem;
     }
 }
