@@ -772,8 +772,25 @@
                 </div>
             </div>
         </section>
+
+        <!-- BOTÕES DE EXPORTAÇÃO -->
+        <section class="export-buttons-section">
+            <div class="export-buttons-container">
+                <button type="button" id="exportPdfBtn" class="btn btn-export btn-pdf" disabled>
+                    <span class="btn-icon">📄</span>
+                    Exportar PDF
+                </button>
+                <button type="button" id="exportCsvBtn" class="btn btn-export btn-csv" disabled>
+                    <span class="btn-icon">📊</span>
+                    Exportar CSV
+                </button>
+            </div>
+        </section>
     </main>
 
+    <!-- Bibliotecas para exportação -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="assets/js/calculadora.js"></script>
 </body>
 </html>
