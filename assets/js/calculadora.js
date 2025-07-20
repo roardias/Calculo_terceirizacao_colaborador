@@ -1791,7 +1791,6 @@ class FileExporter {
     initializeExportButtons() {
         const pdfBtn = document.getElementById('exportPdfBtn');
         const csvBtn = document.getElementById('exportCsvBtn');
-        const debugBtn = document.getElementById('debugBtn');
 
         if (pdfBtn) {
             pdfBtn.addEventListener('click', () => this.exportToPDF());
@@ -1799,14 +1798,6 @@ class FileExporter {
 
         if (csvBtn) {
             csvBtn.addEventListener('click', () => this.exportToCSV());
-        }
-
-        if (debugBtn) {
-            debugBtn.addEventListener('click', () => {
-                console.clear();
-                this.checkExportButtonsStatus();
-                alert('Verifique o console do navegador (F12) para ver o status detalhado dos campos!');
-            });
         }
 
         // Verificar se deve habilitar botões
@@ -1827,47 +1818,37 @@ class FileExporter {
             requiredFields.push('aliquotaSimplesNacional');
         }
 
-        console.log('🔍 Verificando campos obrigatórios para exportação...');
-        console.log('📋 Regime tributário:', regimeTributario);
-
-        const fieldStatus = {};
         let allFieldsFilled = true;
+        const missingFields = [];
 
         requiredFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
             if (!field) {
-                fieldStatus[fieldId] = { exists: false, value: 'N/A', valid: true };
-                return;
+                return; // Campo não existe, considerar como preenchido
             }
             
             const value = field.value.trim();
             const isValid = value && value !== '' && value !== 'R$ 0,00' && value !== '0,00%';
             
-            fieldStatus[fieldId] = {
-                exists: true,
-                value: value || '(vazio)',
-                valid: isValid
-            };
-
             if (!isValid) {
                 allFieldsFilled = false;
+                missingFields.push(fieldId);
             }
         });
 
-        // Log detalhado dos campos
-        console.table(fieldStatus);
-        console.log('✅ Todos os campos preenchidos:', allFieldsFilled);
+        // Log apenas se houver campos faltando (para debug)
+        if (missingFields.length > 0) {
+            console.log('⚠️ Campos obrigatórios não preenchidos:', missingFields);
+        }
 
         const pdfBtn = document.getElementById('exportPdfBtn');
         const csvBtn = document.getElementById('exportCsvBtn');
 
         if (pdfBtn) {
             pdfBtn.disabled = !allFieldsFilled;
-            console.log('📄 Botão PDF:', allFieldsFilled ? 'HABILITADO' : 'DESABILITADO');
         }
         if (csvBtn) {
             csvBtn.disabled = !allFieldsFilled;
-            console.log('📊 Botão CSV:', allFieldsFilled ? 'HABILITADO' : 'DESABILITADO');
         }
     }
 
@@ -1882,11 +1863,12 @@ class FileExporter {
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 15;
             const contentWidth = pageWidth - (margin * 2);
+            const signatureAreaHeight = 40; // Altura necessária para área de assinatura
             
             // Cabeçalho
             this.addPDFHeader(pdf, margin, contentWidth);
             
-            let currentY = 40;
+            let currentY = 50; // Aumentado de 40 para 50 para dar mais espaço
             const blockMargin = 10;
             
             // Processar cada bloco
@@ -1898,8 +1880,10 @@ class FileExporter {
                 // Calcular altura necessária do bloco
                 const blockHeight = this.calculateBlockHeight(block);
                 
-                // Verificar se precisa de nova página
-                if (currentY + blockHeight > pageHeight - margin - 30) { // 30 para assinatura
+                // Verificar se precisa de nova página (incluindo espaço para assinatura)
+                const spaceNeeded = blockHeight + blockMargin + (i === blocks.length - 1 ? signatureAreaHeight : 0);
+                
+                if (currentY + spaceNeeded > pageHeight - margin) {
                     pdf.addPage();
                     currentY = margin;
                 }
@@ -1909,8 +1893,14 @@ class FileExporter {
                 currentY += blockMargin;
             }
             
+            // Verificar se há espaço para a área de assinatura na página atual
+            if (currentY + signatureAreaHeight > pageHeight - margin) {
+                pdf.addPage();
+                currentY = margin;
+            }
+            
             // Adicionar área de assinatura
-            this.addSignatureArea(pdf, pageHeight, margin, contentWidth);
+            this.addSignatureArea(pdf, pageHeight, margin, contentWidth, currentY);
             
             // Salvar PDF
             const nomeCliente = document.getElementById('nomeCliente')?.value || 'Cliente';
@@ -1950,13 +1940,52 @@ class FileExporter {
 
     // Calcular altura do bloco (estimativa)
     calculateBlockHeight(block) {
-        const title = block.querySelector('.block-title');
         const submodules = block.querySelectorAll('.submodule');
         const formGroups = block.querySelectorAll('.form-group');
         
-        let height = 15; // Título
-        height += submodules.length * 20; // Submódulos
-        height += Math.ceil(formGroups.length / 2) * 8; // Campos (2 por linha)
+        let height = 0;
+        
+        // Título do bloco
+        height += 15;
+        
+        // Contar apenas campos que têm valores (não vazios)
+        let fieldsWithValues = 0;
+        formGroups.forEach(group => {
+            const input = group.querySelector('.form-input');
+            const value = input?.value || '';
+            if (value && value !== 'R$ 0,00' && value !== '0,00%' && value !== '') {
+                fieldsWithValues++;
+            }
+        });
+        
+        // Calcular altura baseada nos campos com valores (2 campos por linha)
+        const fieldRows = Math.ceil(fieldsWithValues / 2);
+        height += fieldRows * 10; // 10mm por linha de campos
+        
+        // Adicionar altura dos submódulos
+        submodules.forEach(submodule => {
+            // Título do submódulo
+            height += 8;
+            
+            // Campos do submódulo
+            const subFields = submodule.querySelectorAll('.form-group');
+            let subFieldsWithValues = 0;
+            
+            subFields.forEach(group => {
+                const input = group.querySelector('.form-input');
+                const value = input?.value || '';
+                if (value && value !== 'R$ 0,00' && value !== '0,00%' && value !== '') {
+                    subFieldsWithValues++;
+                }
+            });
+            
+            const subFieldRows = Math.ceil(subFieldsWithValues / 2);
+            height += subFieldRows * 8; // 8mm por linha de campos em submódulos
+            height += 5; // Espaçamento extra para submódulo
+        });
+        
+        // Espaçamento mínimo entre blocos
+        height += 5;
         
         return height;
     }
@@ -2027,23 +2056,27 @@ class FileExporter {
     }
 
     // Adicionar área de assinatura
-    addSignatureArea(pdf, pageHeight, margin, contentWidth) {
-        const signatureY = pageHeight - 40;
+    addSignatureArea(pdf, pageHeight, margin, contentWidth, currentY = null) {
+        // Se currentY não foi fornecido, usar posição padrão no final da página
+        const signatureY = currentY ? currentY + 20 : pageHeight - 40;
+        
+        // Garantir que não ultrapasse a margem inferior
+        const finalY = Math.min(signatureY, pageHeight - 40);
         
         // Quadrado para assinatura digital
         pdf.setDrawColor(0, 0, 0);
         pdf.setLineWidth(0.5);
-        pdf.rect(margin, signatureY - 20, 60, 20);
+        pdf.rect(margin, finalY - 20, 60, 20);
         
         // Texto
         pdf.setFontSize(10);
         pdf.setTextColor(0, 0, 0);
-        pdf.text('Assinatura Digital:', margin, signatureY - 25);
-        pdf.text('Data: ___/___/______', margin + 70, signatureY - 10);
+        pdf.text('Assinatura Digital:', margin, finalY - 25);
+        pdf.text('Data: ___/___/______', margin + 70, finalY - 10);
         
         // Linha para assinatura manual
-        pdf.line(margin + 70, signatureY, margin + contentWidth, signatureY);
-        pdf.text('Responsável pela Proposta', margin + 70, signatureY + 5);
+        pdf.line(margin + 70, finalY, margin + contentWidth, finalY);
+        pdf.text('Responsável pela Proposta', margin + 70, finalY + 5);
     }
 
     // Exportar para CSV
@@ -2066,10 +2099,7 @@ class FileExporter {
 
     // Coletar todos os dados do formulário
     collectAllData() {
-        const data = [];
-        
-        // Adicionar cabeçalho
-        data.push(['Campo', 'Valor', 'Bloco', 'Tipo']);
+        const data = {};
         
         // Coletar dados de cada bloco
         const blocks = document.querySelectorAll('.calculation-block');
@@ -2077,37 +2107,38 @@ class FileExporter {
         blocks.forEach((block, blockIndex) => {
             const blockTitle = block.querySelector('.block-title');
             const blockNumber = blockTitle.querySelector('.block-number')?.textContent || (blockIndex + 1);
-            const blockText = blockTitle.querySelector('.block-text')?.textContent || blockTitle.textContent;
-            const blockName = `${blockNumber} - ${blockText}`;
             
-            // Total do bloco
+            // Total do bloco (se existir)
             const titleTotal = blockTitle.querySelector('.total-input')?.value;
             if (titleTotal && titleTotal !== 'R$ 0,00') {
-                data.push([`Total do Bloco ${blockNumber}`, titleTotal, blockName, 'Total']);
+                data[`Total Bloco ${blockNumber}`] = titleTotal;
             }
             
             // Campos do bloco
             const formGroups = block.querySelectorAll('.form-group');
             formGroups.forEach(group => {
-                const label = group.querySelector('.form-label')?.textContent?.replace(/\n/g, ' ').trim() || '';
+                const label = group.querySelector('.form-label')?.textContent?.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() || '';
                 const input = group.querySelector('.form-input');
                 const value = input?.value || '';
                 
                 if (label && value && value !== 'R$ 0,00' && value !== '0,00%' && value !== '') {
-                    const isCalculated = input?.classList.contains('calculation-result');
-                    const type = isCalculated ? 'Calculado' : 'Informado';
-                    data.push([label, value, blockName, type]);
+                    // Limpar o label para ser usado como chave da coluna
+                    const cleanLabel = label.replace(/\*/g, '').replace(/\s+/g, ' ').trim();
+                    data[cleanLabel] = value;
                 }
             });
             
-            // Submódulos
+            // Submódulos (subtotais)
             const submodules = block.querySelectorAll('.submodule');
             submodules.forEach(submodule => {
-                const subTitle = submodule.querySelector('.submodule-title')?.textContent?.replace(/\n/g, ' ').trim() || '';
+                const subTitle = submodule.querySelector('.submodule-title')?.textContent?.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim() || '';
                 const subTotal = submodule.querySelector('.subtotal-input')?.value;
                 
-                if (subTotal && subTotal !== 'R$ 0,00') {
-                    data.push([`Subtotal: ${subTitle}`, subTotal, blockName, 'Subtotal']);
+                if (subTotal && subTotal !== 'R$ 0,00' && subTitle) {
+                    // Extrair apenas a parte principal do título do submódulo
+                    const cleanSubTitle = subTitle.split(' - ')[1] || subTitle;
+                    const finalTitle = `Subtotal ${cleanSubTitle.replace(/Total:.*/, '').trim()}`;
+                    data[finalTitle] = subTotal;
                 }
             });
         });
@@ -2117,13 +2148,58 @@ class FileExporter {
 
     // Converter dados para formato CSV
     convertToCSV(data) {
-        return data.map(row => 
-            row.map(field => {
-                // Escapar aspas e adicionar aspas se necessário
-                const escaped = String(field || '').replace(/"/g, '""');
+        // Definir ordem preferencial das colunas (campos mais importantes primeiro)
+        const preferredOrder = [
+            'CNPJ', 'Nome do Cliente', 'Responsável pela Proposta', 'Cargo',
+            'Regime Tributário da Empresa', 'Quantidade', 'Salário Bruto do Colaborador',
+            'Data Base', 'Valor Passagem Diária (Ida e Volta)', 'Auxílio-Refeição - Valor Diário',
+            'Percentual de Margem de Lucro'
+        ];
+        
+        // Obter todas as chaves disponíveis
+        const allHeaders = Object.keys(data);
+        
+        // Organizar headers: primeiro os da ordem preferencial, depois os restantes
+        const orderedHeaders = [];
+        
+        // Adicionar campos na ordem preferencial (se existirem)
+        preferredOrder.forEach(preferred => {
+            const found = allHeaders.find(header => 
+                header.toLowerCase().includes(preferred.toLowerCase()) ||
+                preferred.toLowerCase().includes(header.toLowerCase())
+            );
+            if (found && !orderedHeaders.includes(found)) {
+                orderedHeaders.push(found);
+            }
+        });
+        
+        // Adicionar campos restantes que não estão na ordem preferencial
+        allHeaders.forEach(header => {
+            if (!orderedHeaders.includes(header)) {
+                orderedHeaders.push(header);
+            }
+        });
+        
+        // Função para escapar campos CSV (tratar vírgulas, aspas, etc.)
+        const escapeCSVField = (field) => {
+            const fieldStr = String(field || '');
+            // Se contém vírgula, quebra de linha ou aspas, precisa ser envolvido em aspas
+            if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n') || fieldStr.includes('\r')) {
+                // Escapar aspas duplicando-as
+                const escaped = fieldStr.replace(/"/g, '""');
                 return `"${escaped}"`;
-            }).join(',')
-        ).join('\n');
+            }
+            return fieldStr;
+        };
+        
+        // Criar linha de cabeçalho
+        const headerLine = orderedHeaders.map(escapeCSVField).join(',');
+        
+        // Criar linha de valores na mesma ordem
+        const valueLine = orderedHeaders.map(header => escapeCSVField(data[header] || '')).join(',');
+        
+        // Retornar CSV com cabeçalho e dados
+        return headerLine + '\n' + valueLine;
     }
 
     // Download do arquivo CSV
