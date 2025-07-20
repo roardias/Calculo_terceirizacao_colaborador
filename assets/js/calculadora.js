@@ -429,6 +429,17 @@ class CalculadoraTerceirizacao {
                 }, 100);
             }
         }, true);
+
+        // Event listener específico para quantidade (recalcular total múltiplos empregados)
+        const quantidadeField = document.getElementById('quantidade');
+        if (quantidadeField) {
+            quantidadeField.addEventListener('input', () => {
+                // Recalcular resumo final para atualizar total de múltiplos empregados
+                setTimeout(() => {
+                    this.calculateResumoFinal();
+                }, 100);
+            });
+        }
     }
 
     // Valores padrão
@@ -1774,6 +1785,46 @@ class CalculadoraTerceirizacao {
             margemLucro: this.formatCurrency(resumoMargemLucro),
             total: this.formatCurrency(resumoTotalGeralFinal)
         });
+
+        // Calcular e exibir total para múltiplos empregados
+        this.calculateTotalMultiplosEmpregados(resumoTotalGeralFinal);
+    }
+
+    // Calcular total para múltiplos empregados
+    calculateTotalMultiplosEmpregados(totalPorEmpregado) {
+        const quantidadeField = document.getElementById('quantidade');
+        const totalMultiplosDiv = document.getElementById('totalMultiplosEmpregados');
+        const labelTotalMultiplos = document.getElementById('labelTotalMultiplos');
+        const resumoFinalTotalMultiplo = document.getElementById('resumoFinalTotalMultiplo');
+
+        if (!quantidadeField || !totalMultiplosDiv || !labelTotalMultiplos || !resumoFinalTotalMultiplo) {
+            return;
+        }
+
+        const quantidade = parseInt(quantidadeField.value) || 1;
+
+        if (quantidade > 1) {
+            // Mostrar campo para múltiplos empregados
+            totalMultiplosDiv.style.display = 'block';
+            
+            // Atualizar label com a quantidade
+            labelTotalMultiplos.innerHTML = `<strong>Total para ${quantidade} Empregados</strong>`;
+            
+            // Calcular e exibir total multiplicado
+            const totalMultiplo = totalPorEmpregado * quantidade;
+            resumoFinalTotalMultiplo.value = this.formatCurrency(totalMultiplo);
+            
+            // Adicionar animação de destaque
+            resumoFinalTotalMultiplo.classList.add('highlighted');
+            setTimeout(() => {
+                resumoFinalTotalMultiplo.classList.remove('highlighted');
+            }, 500);
+            
+            console.log(`💼 Total para ${quantidade} empregados: ${this.formatCurrency(totalMultiplo)}`);
+        } else {
+            // Esconder campo se quantidade <= 1
+            totalMultiplosDiv.style.display = 'none';
+        }
     }
 
     // Verificar se o dispositivo é um mobile
@@ -2027,7 +2078,13 @@ class FileExporter {
             const input = group.querySelector('.form-input');
             const value = input?.value || '';
             
-            if (label && value && value !== 'R$ 0,00' && value !== '0,00%') {
+            // Verificar se é o campo de total múltiplos empregados (pode estar oculto)
+            const isMultipleTotal = input?.id === 'resumoFinalTotalMultiplo';
+            const multipleDiv = document.getElementById('totalMultiplosEmpregados');
+            const isVisible = !multipleDiv || multipleDiv.style.display !== 'none';
+            
+            if (label && value && value !== 'R$ 0,00' && value !== '0,00%' && 
+                (!isMultipleTotal || (isMultipleTotal && isVisible))) {
                 pdf.setFontSize(9);
                 pdf.setTextColor(0, 0, 0);
                 
@@ -2127,6 +2184,19 @@ class FileExporter {
                     data[cleanLabel] = value;
                 }
             });
+            
+            // Verificar se é o último bloco (Resumo Final) e incluir total múltiplo se aplicável
+            if (blockNumber === '9') {
+                const totalMultiplosDiv = document.getElementById('totalMultiplosEmpregados');
+                const resumoFinalTotalMultiplo = document.getElementById('resumoFinalTotalMultiplo');
+                const labelTotalMultiplos = document.getElementById('labelTotalMultiplos');
+                
+                if (totalMultiplosDiv && totalMultiplosDiv.style.display !== 'none' && 
+                    resumoFinalTotalMultiplo && resumoFinalTotalMultiplo.value !== 'R$ 0,00') {
+                    const labelText = labelTotalMultiplos?.textContent?.trim() || 'Total para Múltiplos Empregados';
+                    data[labelText] = resumoFinalTotalMultiplo.value;
+                }
+            }
             
             // Submódulos (subtotais)
             const submodules = block.querySelectorAll('.submodule');
