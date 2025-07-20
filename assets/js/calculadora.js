@@ -409,6 +409,26 @@ class CalculadoraTerceirizacao {
                 }, 100);
             });
         }
+
+        // Prevenir zoom persistente no mobile
+        document.addEventListener('blur', (e) => {
+            if (e.target.classList.contains('form-input') && this.isMobile()) {
+                // Forçar zoom out no mobile após edição
+                setTimeout(() => {
+                    const viewport = document.querySelector('meta[name="viewport"]');
+                    if (viewport) {
+                        // Força reset do viewport
+                        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                    }
+                    
+                    // Scroll suave para cima para "resetar" a visualização
+                    window.scrollTo({
+                        top: window.pageYOffset - 1,
+                        behavior: 'smooth'
+                    });
+                }, 100);
+            }
+        }, true);
     }
 
     // Valores padrão
@@ -1754,6 +1774,11 @@ class CalculadoraTerceirizacao {
             margemLucro: this.formatCurrency(resumoMargemLucro),
             total: this.formatCurrency(resumoTotalGeralFinal)
         });
+    }
+
+    // Verificar se o dispositivo é um mobile
+    isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 }
 
