@@ -262,9 +262,7 @@ class CalculadoraTerceirizacao {
             { id: 'dataBase', validator: this.validateDataBase.bind(this) },
             { id: 'valorPassagemDiaria', validator: this.validateValorPassagem.bind(this) },
             { id: 'auxilioRefeicaoValorDiario', validator: this.validateAuxilioRefeicao.bind(this) },
-            { id: 'percentualCustosAdicionais', validator: this.validatePercentualCustosAdicionais.bind(this) },
-            { id: 'percentualMargemLucro', validator: this.validatePercentualMargemLucro.bind(this) },
-            { id: 'aliquotaSimplesNacional', validator: this.validateAliquotaSimplesNacional.bind(this) }
+            { id: 'percentualMargemLucro', validator: this.validatePercentualMargemLucro.bind(this) }
         ];
 
         validationFields.forEach(({ id, validator }) => {
@@ -676,28 +674,6 @@ class CalculadoraTerceirizacao {
         return true;
     }
 
-    validatePercentualCustosAdicionais() {
-        const field = document.getElementById('percentualCustosAdicionais');
-        const value = field.value;
-
-        if (!FormValidator.validators.required(value)) {
-            FormValidator.showValidation('percentualCustosAdicionais', false, 'Percentual de custos adicionais é obrigatório.');
-            return false;
-        }
-
-        // Extrair valor numérico, considerando vírgula como separador decimal
-        const cleanValue = value.replace('%', '').replace(',', '.');
-        const numericValue = parseFloat(cleanValue);
-        
-        if (isNaN(numericValue) || numericValue < 0 || numericValue > 100) {
-            FormValidator.showValidation('percentualCustosAdicionais', false, 'Percentual deve ser um número entre 0 e 100.');
-            return false;
-        }
-
-        FormValidator.showValidation('percentualCustosAdicionais', true, `Percentual válido: ${value} ✓`);
-        return true;
-    }
-
     validatePercentualMargemLucro() {
         const field = document.getElementById('percentualMargemLucro');
         const value = field.value;
@@ -720,16 +696,38 @@ class CalculadoraTerceirizacao {
         return true;
     }
 
+    validatePercentualCustosAdicionais() {
+        const field = document.getElementById('percentualCustosAdicionais');
+        const value = field.value;
+
+        // Campo opcional - se vazio, é válido
+        if (!value || value.trim() === '') {
+            return true;
+        }
+
+        // Se preenchido, validar formato
+        const cleanValue = value.replace('%', '').replace(',', '.');
+        const numericValue = parseFloat(cleanValue);
+        
+        if (isNaN(numericValue) || numericValue < 0 || numericValue > 100) {
+            FormValidator.showValidation('percentualCustosAdicionais', false, 'Percentual deve ser um número entre 0 e 100.');
+            return false;
+        }
+
+        FormValidator.showValidation('percentualCustosAdicionais', true, `Percentual válido: ${value} ✓`);
+        return true;
+    }
+
     validateAliquotaSimplesNacional() {
         const field = document.getElementById('aliquotaSimplesNacional');
         const value = field.value;
 
-        if (!FormValidator.validators.required(value)) {
-            FormValidator.showValidation('aliquotaSimplesNacional', false, 'Alíquota do Simples Nacional é obrigatória.');
-            return false;
+        // Campo opcional - se vazio, é válido
+        if (!value || value.trim() === '') {
+            return true;
         }
 
-        // Extrair valor numérico, considerando vírgula como separador decimal
+        // Se preenchido, validar formato
         const cleanValue = value.replace('%', '').replace(',', '.');
         const numericValue = parseFloat(cleanValue);
         
@@ -1148,8 +1146,8 @@ class CalculadoraTerceirizacao {
         const regimeTributario = document.getElementById('regimeTributario').value;
         const isSimples = regimeTributario === 'simples';
         
-        if (!percentualCustosField || !percentualCustosField.value || totalGeralEmpregado <= 0) {
-            // Limpar campos se não houver dados
+        // Se não há total geral, limpar tudo
+        if (totalGeralEmpregado <= 0) {
             this.updateCalculationField('valorCustosAdicionais', 0);
             this.updateCalculationField('pis', 0);
             this.updateCalculationField('cofins', 0);
@@ -1161,12 +1159,19 @@ class CalculadoraTerceirizacao {
             return;
         }
 
-        // Converter percentual considerando vírgula como separador decimal
-        const cleanValue = percentualCustosField.value.replace('%', '').replace(',', '.');
-        const percentualCustos = parseFloat(cleanValue) / 100;
+        // 7.1 - Custos Adicionais (opcional)
+        let valorCustosAdicionais = 0;
+        let percentualCustos = 0;
 
-        // 7.1 - Custos Adicionais (% sobre Total Geral por Empregado)
-        const valorCustosAdicionais = totalGeralEmpregado * percentualCustos;
+        if (percentualCustosField && percentualCustosField.value && percentualCustosField.value.trim() !== '') {
+            // Converter percentual considerando vírgula como separador decimal
+            const cleanValue = percentualCustosField.value.replace('%', '').replace(',', '.');
+            percentualCustos = parseFloat(cleanValue) / 100;
+            
+            if (!isNaN(percentualCustos) && percentualCustos >= 0) {
+                valorCustosAdicionais = totalGeralEmpregado * percentualCustos;
+            }
+        }
 
         // Atualizar campos 7.1
         this.updateCalculationField('valorCustosAdicionais', valorCustosAdicionais);
@@ -1177,43 +1182,51 @@ class CalculadoraTerceirizacao {
         
         let pis = 0, cofins = 0, iss = 0, tributoSimplesNacional = 0, totalTributos = 0;
 
-        if (isSimples) {
-            // Simples Nacional - usar alíquota informada pelo usuário
-            const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
-            if (aliquotaSimplesField && aliquotaSimplesField.value) {
-                const cleanAliquota = aliquotaSimplesField.value.replace('%', '').replace(',', '.');
-                const aliquotaSimples = parseFloat(cleanAliquota) / 100;
-                
-                if (!isNaN(aliquotaSimples)) {
-                    tributoSimplesNacional = baseCalculoTributos * aliquotaSimples;
-                    totalTributos = tributoSimplesNacional;
+        if (baseCalculoTributos > 0) {
+            if (isSimples) {
+                // Simples Nacional - usar alíquota informada pelo usuário
+                const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
+                if (aliquotaSimplesField && aliquotaSimplesField.value) {
+                    const cleanAliquota = aliquotaSimplesField.value.replace('%', '').replace(',', '.');
+                    const aliquotaSimples = parseFloat(cleanAliquota) / 100;
                     
-                    // Atualizar percentual exibido
-                    const percentSimplesElement = document.getElementById('percentSimplesNacional');
-                    if (percentSimplesElement) {
-                        percentSimplesElement.textContent = `${(aliquotaSimples * 100).toFixed(2).replace('.', ',')}%`;
+                    if (!isNaN(aliquotaSimples)) {
+                        tributoSimplesNacional = baseCalculoTributos * aliquotaSimples;
+                        totalTributos = tributoSimplesNacional;
+                        
+                        // Atualizar percentual exibido
+                        const percentSimplesElement = document.getElementById('percentSimplesNacional');
+                        if (percentSimplesElement) {
+                            percentSimplesElement.textContent = `${(aliquotaSimples * 100).toFixed(2).replace('.', ',')}%`;
+                        }
                     }
                 }
+                
+                // Limpar campos do Lucro Presumido
+                this.updateCalculationField('pis', 0);
+                this.updateCalculationField('cofins', 0);
+                this.updateCalculationField('iss', 0);
+                
+            } else {
+                // Lucro Presumido/Real - usar PIS/COFINS/ISS
+                pis = baseCalculoTributos * 0.0059;     // 0,59%
+                cofins = baseCalculoTributos * 0.0271;  // 2,71%
+                iss = baseCalculoTributos * 0.05;       // 5,00%
+                totalTributos = pis + cofins + iss;
+                
+                // Atualizar campos do Lucro Presumido
+                this.updateCalculationField('pis', pis);
+                this.updateCalculationField('cofins', cofins);
+                this.updateCalculationField('iss', iss);
+                
+                // Limpar campo do Simples Nacional
+                this.updateCalculationField('tributoSimplesNacional', 0);
             }
-            
-            // Limpar campos do Lucro Presumido
+        } else {
+            // Se não há base de cálculo, zerar tributos
             this.updateCalculationField('pis', 0);
             this.updateCalculationField('cofins', 0);
             this.updateCalculationField('iss', 0);
-            
-        } else {
-            // Lucro Presumido/Real - usar PIS/COFINS/ISS
-            pis = baseCalculoTributos * 0.0059;     // 0,59%
-            cofins = baseCalculoTributos * 0.0271;  // 2,71%
-            iss = baseCalculoTributos * 0.05;       // 5,00%
-            totalTributos = pis + cofins + iss;
-            
-            // Atualizar campos do Lucro Presumido
-            this.updateCalculationField('pis', pis);
-            this.updateCalculationField('cofins', cofins);
-            this.updateCalculationField('iss', iss);
-            
-            // Limpar campo do Simples Nacional
             this.updateCalculationField('tributoSimplesNacional', 0);
         }
 
@@ -1413,13 +1426,15 @@ class CalculadoraTerceirizacao {
             this.validateDataBase(),
             this.validateValorPassagem(),
             this.validateAuxilioRefeicao(),
-            this.validatePercentualCustosAdicionais(),
             this.validatePercentualMargemLucro()
         ];
         
         // Adicionar validação da alíquota do Simples Nacional apenas se regime for Simples Nacional
         if (isSimples) {
-            validations.push(this.validateAliquotaSimplesNacional());
+            const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
+            if (aliquotaSimplesField && aliquotaSimplesField.value && aliquotaSimplesField.value.trim() !== '') {
+                validations.push(this.validateAliquotaSimplesNacional());
+            }
         }
         
         return validations.every(valid => valid === true);
