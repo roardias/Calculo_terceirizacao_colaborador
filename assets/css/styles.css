@@ -587,13 +587,19 @@ body {
     /* Títulos dos blocos responsivos */
     .block-title {
         font-size: 1.1rem;
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
         gap: 0.5rem;
         text-align: left;
         word-wrap: break-word;
         overflow-wrap: break-word;
         line-height: 1.2;
+        flex-wrap: wrap;
+    }
+    
+    .block-number {
+        flex-shrink: 0;
+        margin-right: 0.3rem;
     }
     
     .title-total {
@@ -603,6 +609,8 @@ body {
         justify-content: flex-start;
         align-self: flex-start;
         gap: 0.5rem;
+        order: 2;
+        flex-basis: 100%;
     }
     
     .total-input {
@@ -1102,13 +1110,19 @@ select.form-input option {
     /* Títulos dos blocos responsivos */
     .block-title {
         font-size: 1.1rem;
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
         gap: 0.5rem;
         text-align: left;
         word-wrap: break-word;
         overflow-wrap: break-word;
         line-height: 1.2;
+        flex-wrap: wrap;
+    }
+    
+    .block-number {
+        flex-shrink: 0;
+        margin-right: 0.3rem;
     }
     
     .title-total {
@@ -1118,6 +1132,8 @@ select.form-input option {
         justify-content: flex-start;
         align-self: flex-start;
         gap: 0.5rem;
+        order: 2;
+        flex-basis: 100%;
     }
     
     .total-input {
