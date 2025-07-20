@@ -2198,6 +2198,41 @@ class FileExporter {
                 }
             }
             
+            // Coletar campos adicionais importantes para o CSV
+            if (blockNumber === '7') {
+                // Bloco 7 - Custos Adicionais e Tributos
+                const percentualCustosField = document.getElementById('percentualCustosAdicionais');
+                const valorCustosField = document.getElementById('valorCustosAdicionais');
+                const pisField = document.getElementById('pis');
+                const cofinsField = document.getElementById('cofins');
+                const issField = document.getElementById('iss');
+                const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
+                const tributoSimplesField = document.getElementById('tributoSimplesNacional');
+                const totalBloco7Field = document.getElementById('totalBloco7');
+                
+                if (percentualCustosField && percentualCustosField.value) data['Percentual de Custos Adicionais'] = percentualCustosField.value;
+                if (valorCustosField && valorCustosField.value && valorCustosField.value !== 'R$ 0,00') data['Valor dos Custos Adicionais'] = valorCustosField.value;
+                if (pisField && pisField.value && pisField.value !== 'R$ 0,00') data['PIS'] = pisField.value;
+                if (cofinsField && cofinsField.value && cofinsField.value !== 'R$ 0,00') data['COFINS'] = cofinsField.value;
+                if (issField && issField.value && issField.value !== 'R$ 0,00') data['ISS'] = issField.value;
+                if (aliquotaSimplesField && aliquotaSimplesField.value) data['Alíquota do Simples Nacional'] = aliquotaSimplesField.value;
+                if (tributoSimplesField && tributoSimplesField.value && tributoSimplesField.value !== 'R$ 0,00') data['Valor do Tributo Simples Nacional'] = tributoSimplesField.value;
+                if (totalBloco7Field && totalBloco7Field.value && totalBloco7Field.value !== 'R$ 0,00') data['Total Bloco 7'] = totalBloco7Field.value;
+            }
+            
+            if (blockNumber === '8') {
+                // Bloco 8 - Margem de Lucro
+                const percentualMargemField = document.getElementById('percentualMargemLucro');
+                const valorTotalComMargemField = document.getElementById('valorTotalComMargem');
+                const baseCalculoTributosField = document.getElementById('baseCalculoTributos');
+                const valorMargemLucroField = document.getElementById('valorMargemLucro');
+                
+                if (percentualMargemField && percentualMargemField.value) data['Percentual de Margem de Lucro'] = percentualMargemField.value;
+                if (valorTotalComMargemField && valorTotalComMargemField.value && valorTotalComMargemField.value !== 'R$ 0,00') data['Valor Total com Margem'] = valorTotalComMargemField.value;
+                if (baseCalculoTributosField && baseCalculoTributosField.value && baseCalculoTributosField.value !== 'R$ 0,00') data['Base de Cálculo para Tributos'] = baseCalculoTributosField.value;
+                if (valorMargemLucroField && valorMargemLucroField.value && valorMargemLucroField.value !== 'R$ 0,00') data['Margem de Lucro'] = valorMargemLucroField.value;
+            }
+            
             // Submódulos (subtotais)
             const submodules = block.querySelectorAll('.submodule');
             submodules.forEach(submodule => {
@@ -2218,58 +2253,233 @@ class FileExporter {
 
     // Converter dados para formato CSV
     convertToCSV(data) {
-        // Definir ordem preferencial das colunas (campos mais importantes primeiro)
-        const preferredOrder = [
-            'CNPJ', 'Nome do Cliente', 'Responsável pela Proposta', 'Cargo',
-            'Regime Tributário da Empresa', 'Quantidade', 'Salário Bruto do Colaborador',
-            'Data Base', 'Valor Passagem Diária (Ida e Volta)', 'Auxílio-Refeição - Valor Diário',
-            'Percentual de Margem de Lucro'
+        // Definir ordem exata das colunas conforme solicitado
+        const exactColumnOrder = [
+            'CNPJ',
+            'Nome do Cliente', 
+            'Responsável pela Proposta',
+            'Cargo',
+            'Regime Tributário da Empresa',
+            'Quantidade',
+            'Salário Bruto do Colaborador',
+            'Data Base',
+            '13º (Décimo-terceiro) Salário',
+            '1/3 Férias Proporcionais',
+            'Férias Proporcionais',
+            'INSS',
+            'Salário Educação',
+            'SAT (Seguro Acidente de Trabalho)',
+            'SESC ou SESI',
+            'SENAI - SENAC',
+            'SEBRAE',
+            'INCRA',
+            'FGTS',
+            'Valor Passagem Diária (Ida e Volta)',
+            'Total Mensal (23 dias)',
+            'Desconto Funcionário (6% do Salário Bruto)',
+            'Auxílio-Refeição - Valor Diário',
+            'Auxílio-Refeição - Total Mensal (23 dias)',
+            'Aviso Prévio Indenizado',
+            'Incidência do FGTS sobre Aviso Prévio Indenizado',
+            'Multa do FGTS sobre Aviso Prévio Indenizado'
         ];
+
+        // Coletar dados específicos dos benefícios/despesas (Bloco 5)
+        const beneficiosData = this.collectBeneficiosData();
         
-        // Obter todas as chaves disponíveis
-        const allHeaders = Object.keys(data);
-        
-        // Organizar headers: primeiro os da ordem preferencial, depois os restantes
-        const orderedHeaders = [];
-        
-        // Adicionar campos na ordem preferencial (se existirem)
-        preferredOrder.forEach(preferred => {
-            const found = allHeaders.find(header => 
-                header.toLowerCase().includes(preferred.toLowerCase()) ||
-                preferred.toLowerCase().includes(header.toLowerCase())
-            );
-            if (found && !orderedHeaders.includes(found)) {
-                orderedHeaders.push(found);
+        // Adicionar colunas dos benefícios à ordem
+        const beneficiosColumns = [];
+        for (let i = 1; i <= 5; i++) {
+            const tipoField = document.getElementById(`tipoCusto${i}`);
+            const valorField = document.getElementById(`valorCusto${i}`);
+            
+            if (tipoField && tipoField.value.trim() && valorField && valorField.value.trim() && valorField.value !== 'R$ 0,00') {
+                const tipoCusto = tipoField.value.trim();
+                beneficiosColumns.push(`Benefício/Despesa ${i}`);
+                beneficiosColumns.push(`${tipoCusto} R$`);
             }
-        });
+        }
+
+        // Continuar com as colunas finais
+        const finalColumns = [
+            'Total Salário Bruto do Colaborador',
+            'Total Encargos e Benefícios Anuais, Mensais e Diários',
+            'Total Provisão para Rescisão',
+            'Total Benefícios/Despesas Adicionais',
+            'TOTAL GERAL POR EMPREGADO',
+            'Percentual de Custos Adicionais',
+            'Valor dos Custos Adicionais',
+            'PIS',
+            'COFINS',
+            'ISS',
+            'Alíquota do Simples Nacional',
+            'Valor do Tributo Simples Nacional',
+            'Percentual de Margem de Lucro',
+            'Valor Total com Margem',
+            'Base de Cálculo para Tributos',
+            'Custos Adicionais e Tributos',
+            'Margem de Lucro',
+            'Total por empregado'
+        ];
+
+        // Verificar se existe total para múltiplos empregados
+        const totalMultiplosDiv = document.getElementById('totalMultiplosEmpregados');
+        const resumoFinalTotalMultiplo = document.getElementById('resumoFinalTotalMultiplo');
+        const quantidadeField = document.getElementById('quantidade');
+        const quantidade = parseInt(quantidadeField?.value) || 1;
         
-        // Adicionar campos restantes que não estão na ordem preferencial
-        allHeaders.forEach(header => {
-            if (!orderedHeaders.includes(header)) {
-                orderedHeaders.push(header);
-            }
-        });
-        
+        if (totalMultiplosDiv && totalMultiplosDiv.style.display !== 'none' && 
+            resumoFinalTotalMultiplo && resumoFinalTotalMultiplo.value !== 'R$ 0,00' && quantidade > 1) {
+            finalColumns.push(`Total para ${quantidade} Empregados`);
+        }
+
+        // Combinar todas as colunas na ordem correta
+        const orderedHeaders = [...exactColumnOrder, ...beneficiosColumns, ...finalColumns];
+
+        // Mapear dados para títulos corretos
+        const mappedData = this.mapDataToCorrectTitles(data, beneficiosData);
+
         // Função para escapar campos CSV (tratar vírgulas, aspas, etc.)
         const escapeCSVField = (field) => {
             const fieldStr = String(field || '');
-            // Se contém vírgula, quebra de linha ou aspas, precisa ser envolvido em aspas
             if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n') || fieldStr.includes('\r')) {
-                // Escapar aspas duplicando-as
                 const escaped = fieldStr.replace(/"/g, '""');
                 return `"${escaped}"`;
             }
             return fieldStr;
         };
-        
+
         // Criar linha de cabeçalho
         const headerLine = orderedHeaders.map(escapeCSVField).join(',');
-        
-        // Criar linha de valores na mesma ordem
-        const valueLine = orderedHeaders.map(header => escapeCSVField(data[header] || '')).join(',');
-        
-        // Retornar CSV com cabeçalho e dados
+
+        // Criar linha de valores na ordem correta
+        const valueLine = orderedHeaders.map(header => {
+            let value = mappedData[header] || '';
+            
+            // Tratar desconto funcionário como negativo
+            if (header === 'Desconto Funcionário (6% do Salário Bruto)' && value) {
+                value = value.replace('R$ ', 'R$ -');
+            }
+            
+            return escapeCSVField(value);
+        }).join(',');
+
         return headerLine + '\n' + valueLine;
+    }
+
+    // Coletar dados específicos dos benefícios/despesas
+    collectBeneficiosData() {
+        const beneficios = {};
+        
+        for (let i = 1; i <= 5; i++) {
+            const tipoField = document.getElementById(`tipoCusto${i}`);
+            const valorField = document.getElementById(`valorCusto${i}`);
+            
+            if (tipoField && tipoField.value.trim() && valorField && valorField.value.trim() && valorField.value !== 'R$ 0,00') {
+                const tipoCusto = tipoField.value.trim();
+                beneficios[`Benefício/Despesa ${i}`] = tipoCusto;
+                beneficios[`${tipoCusto} R$`] = valorField.value;
+            }
+        }
+        
+        return beneficios;
+    }
+
+    // Mapear dados para títulos corretos
+    mapDataToCorrectTitles(originalData, beneficiosData) {
+        const mappedData = { ...beneficiosData }; // Incluir dados dos benefícios
+
+        // Mapear campos originais para títulos corretos
+        const titleMapping = {
+            'CNPJ': 'CNPJ',
+            'Nome do Cliente': 'Nome do Cliente',
+            'Responsável pela Proposta': 'Responsável pela Proposta',
+            'Cargo': 'Cargo',
+            'Regime Tributário da Empresa': 'Regime Tributário da Empresa',
+            'Quantidade': 'Quantidade',
+            'Salário Bruto do Colaborador': 'Salário Bruto do Colaborador',
+            'Data Base': 'Data Base',
+            '13º (Décimo-terceiro) Salário': '13º (Décimo-terceiro) Salário',
+            '1/3 Férias Proporcionais': '1/3 Férias Proporcionais',
+            'Férias Proporcionais': 'Férias Proporcionais',
+            'INSS': 'INSS',
+            'Salário Educação': 'Salário Educação',
+            'SAT (Seguro Acidente de Trabalho)': 'SAT (Seguro Acidente de Trabalho)',
+            'SESC ou SESI': 'SESC ou SESI',
+            'SENAI - SENAC': 'SENAI - SENAC',
+            'SEBRAE': 'SEBRAE',
+            'INCRA': 'INCRA',
+            'FGTS': 'FGTS',
+            'Valor Passagem Diária (Ida e Volta)': 'Valor Passagem Diária (Ida e Volta)',
+            'Total Mensal (23 dias)': 'Total Mensal (23 dias)',
+            'Desconto Funcionário (6% do Salário Bruto)': 'Desconto Funcionário (6% do Salário Bruto)',
+            'Auxílio-Refeição - Valor Diário': 'Auxílio-Refeição - Valor Diário',
+            'Auxílio-Refeição - Total Mensal (23 dias)': 'Auxílio-Refeição - Total Mensal (23 dias)',
+            'Aviso Prévio Indenizado': 'Aviso Prévio Indenizado',
+            'Incidência do FGTS sobre Aviso Prévio Indenizado': 'Incidência do FGTS sobre Aviso Prévio Indenizado',
+            'Multa do FGTS sobre Aviso Prévio Indenizado': 'Multa do FGTS sobre Aviso Prévio Indenizado',
+            // Totais do Bloco 6 com palavra "Total"
+            '2 - Salário Bruto do Colaborador': 'Total Salário Bruto do Colaborador',
+            '3 - Encargos e Benefícios Anuais, Mensais e Diários': 'Total Encargos e Benefícios Anuais, Mensais e Diários',
+            '4 - Provisão para Rescisão': 'Total Provisão para Rescisão',
+            '5 - Benefícios/Despesas Adicionais': 'Total Benefícios/Despesas Adicionais',
+            'Total por empregado': 'TOTAL GERAL POR EMPREGADO',
+            // Bloco 7 e 8
+            'Percentual de Custos Adicionais': 'Percentual de Custos Adicionais',
+            'Valor dos Custos Adicionais': 'Valor dos Custos Adicionais',
+            'PIS': 'PIS',
+            'COFINS': 'COFINS',
+            'ISS': 'ISS',
+            'Alíquota do Simples Nacional': 'Alíquota do Simples Nacional',
+            'Valor do Tributo Simples Nacional': 'Valor do Tributo Simples Nacional',
+            'Percentual de Margem de Lucro': 'Percentual de Margem de Lucro',
+            'Valor Total com Margem': 'Valor Total com Margem',
+            'Base de Cálculo para Tributos': 'Base de Cálculo para Tributos',
+            // Totais finais
+            'Total Bloco 7': 'Custos Adicionais e Tributos',
+            'Margem de Lucro': 'Margem de Lucro',
+            'Total por empregado': 'Total por empregado'
+        };
+
+        // Aplicar mapeamento
+        Object.keys(originalData).forEach(originalKey => {
+            const mappedKey = this.findBestMatch(originalKey, titleMapping);
+            if (mappedKey) {
+                mappedData[mappedKey] = originalData[originalKey];
+            }
+        });
+
+        // Adicionar total múltiplos empregados se aplicável
+        const quantidadeField = document.getElementById('quantidade');
+        const quantidade = parseInt(quantidadeField?.value) || 1;
+        const totalMultiplosDiv = document.getElementById('totalMultiplosEmpregados');
+        const resumoFinalTotalMultiplo = document.getElementById('resumoFinalTotalMultiplo');
+        
+        if (quantidade > 1 && totalMultiplosDiv && totalMultiplosDiv.style.display !== 'none' && 
+            resumoFinalTotalMultiplo && resumoFinalTotalMultiplo.value !== 'R$ 0,00') {
+            mappedData[`Total para ${quantidade} Empregados`] = resumoFinalTotalMultiplo.value;
+        }
+
+        return mappedData;
+    }
+
+    // Encontrar melhor correspondência para mapeamento
+    findBestMatch(originalKey, titleMapping) {
+        // Busca exata
+        if (titleMapping[originalKey]) {
+            return titleMapping[originalKey];
+        }
+
+        // Busca por correspondência parcial
+        for (const [mappedTitle, csvTitle] of Object.entries(titleMapping)) {
+            if (originalKey.toLowerCase().includes(mappedTitle.toLowerCase()) || 
+                mappedTitle.toLowerCase().includes(originalKey.toLowerCase())) {
+                return csvTitle;
+            }
+        }
+
+        // Se não encontrou, usar a chave original
+        return originalKey;
     }
 
     // Download do arquivo CSV
