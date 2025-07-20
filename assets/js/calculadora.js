@@ -1831,6 +1831,86 @@ class CalculadoraTerceirizacao {
     isMobile() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
+
+    // Mapear dados para títulos corretos
+    mapDataToCorrectTitles(originalData, beneficiosData) {
+        const mappedData = { ...beneficiosData }; // Incluir dados dos benefícios
+
+        // Mapear campos originais para títulos corretos
+        const titleMapping = {
+            'CNPJ': 'CNPJ',
+            'Nome do Cliente': 'Nome do Cliente',
+            'Responsável pela Proposta': 'Responsável pela Proposta',
+            'Cargo': 'Cargo',
+            'Regime Tributário da Empresa': 'Regime Tributário da Empresa',
+            'Quantidade': 'Quantidade',
+            'Salário Bruto do Colaborador': 'Salário Bruto do Colaborador',
+            'Data Base': 'Data Base',
+            '13º (Décimo-terceiro) Salário': '13º (Décimo-terceiro) Salário',
+            '1/3 Férias Proporcionais': '1/3 Férias Proporcionais',
+            'Férias Proporcionais': 'Férias Proporcionais',
+            'INSS': 'INSS',
+            'Salário Educação': 'Salário Educação',
+            'SAT (Seguro Acidente de Trabalho)': 'SAT (Seguro Acidente de Trabalho)',
+            'SESC ou SESI': 'SESC ou SESI',
+            'SENAI - SENAC': 'SENAI - SENAC',
+            'SEBRAE': 'SEBRAE',
+            'INCRA': 'INCRA',
+            'FGTS': 'FGTS',
+            'Valor Passagem Diária (Ida e Volta)': 'Valor Passagem Diária (Ida e Volta)',
+            'Total Mensal (23 dias)': 'Total Mensal (23 dias)',
+            'Desconto Funcionário (6% do Salário Bruto)': 'Desconto Funcionário (6% do Salário Bruto)',
+            'Auxílio-Refeição - Valor Diário': 'Auxílio-Refeição - Valor Diário',
+            'Auxílio-Refeição - Total Mensal (23 dias)': 'Auxílio-Refeição - Total Mensal (23 dias)',
+            'Aviso Prévio Indenizado': 'Aviso Prévio Indenizado',
+            'Incidência do FGTS sobre Aviso Prévio Indenizado': 'Incidência do FGTS sobre Aviso Prévio Indenizado',
+            'Multa do FGTS sobre Aviso Prévio Indenizado': 'Multa do FGTS sobre Aviso Prévio Indenizado',
+            // Totais do Bloco 6 - MAPEAMENTO DIRETO
+            'Total Salário Bruto do Colaborador': 'Total Salário Bruto do Colaborador',
+            'Total Encargos e Benefícios Anuais, Mensais e Diários': 'Total Encargos e Benefícios Anuais, Mensais e Diários',
+            'Total Provisão para Rescisão': 'Total Provisão para Rescisão',
+            'Total Benefícios/Despesas Adicionais': 'Total Benefícios/Despesas Adicionais',
+            'TOTAL GERAL POR EMPREGADO': 'TOTAL GERAL POR EMPREGADO',
+            // Bloco 7 e 8
+            'Percentual de Custos Adicionais': 'Percentual de Custos Adicionais',
+            'Valor dos Custos Adicionais': 'Valor dos Custos Adicionais',
+            'PIS': 'PIS',
+            'COFINS': 'COFINS',
+            'ISS': 'ISS',
+            'Alíquota do Simples Nacional': 'Alíquota do Simples Nacional',
+            'Valor do Tributo Simples Nacional': 'Valor do Tributo Simples Nacional',
+            'Percentual de Margem de Lucro': 'Percentual de Margem de Lucro',
+            'Valor Total com Margem': 'Valor Total com Margem',
+            'Base de Cálculo para Tributos': 'Base de Cálculo para Tributos',
+            // Totais finais
+            'Total Bloco 7': 'Custos Adicionais e Tributos',
+            'Margem de Lucro': 'Margem de Lucro',
+            'Total por empregado': 'Total por empregado'
+        };
+
+        // Aplicar mapeamento - CÓPIA DIRETA
+        Object.keys(originalData).forEach(originalKey => {
+            if (titleMapping[originalKey]) {
+                mappedData[titleMapping[originalKey]] = originalData[originalKey];
+            } else {
+                // Se não tem mapeamento direto, usar a chave original
+                mappedData[originalKey] = originalData[originalKey];
+            }
+        });
+
+        // Adicionar total múltiplos empregados se aplicável
+        const quantidadeField = document.getElementById('quantidade');
+        const quantidade = parseInt(quantidadeField?.value) || 1;
+        const totalMultiplosDiv = document.getElementById('totalMultiplosEmpregados');
+        const resumoFinalTotalMultiplo = document.getElementById('resumoFinalTotalMultiplo');
+        
+        if (quantidade > 1 && totalMultiplosDiv && totalMultiplosDiv.style.display !== 'none' && 
+            resumoFinalTotalMultiplo && resumoFinalTotalMultiplo.value !== 'R$ 0,00') {
+            mappedData[`Total para ${quantidade} Empregados`] = resumoFinalTotalMultiplo.value;
+        }
+
+        return mappedData;
+    }
 }
 
 // EXPORTADOR DE ARQUIVOS
@@ -2241,22 +2321,12 @@ class FileExporter {
                 const resumoCustosAdicionaisField = document.getElementById('resumoCustosAdicionais');
                 const resumoTotalGeralField = document.getElementById('resumoTotalGeral');
                 
-                console.log('🔍 Debug Bloco 6:', {
-                    salarioBruto: resumoSalarioBrutoField?.value,
-                    encargos: resumoEncargosField?.value,
-                    provisao: resumoProvisaoRescisaoField?.value,
-                    custosAdicionais: resumoCustosAdicionaisField?.value,
-                    totalGeral: resumoTotalGeralField?.value
-                });
-                
                 // Incluir valores mesmo que sejam R$ 0,00 pois são campos calculados importantes
                 if (resumoSalarioBrutoField && resumoSalarioBrutoField.value) {
                     data['Total Salário Bruto do Colaborador'] = resumoSalarioBrutoField.value;
-                    console.log('✅ Coletado Total Salário Bruto:', resumoSalarioBrutoField.value);
                 }
                 if (resumoEncargosField && resumoEncargosField.value) {
                     data['Total Encargos e Benefícios Anuais, Mensais e Diários'] = resumoEncargosField.value;
-                    console.log('✅ Coletado Total Encargos:', resumoEncargosField.value);
                 }
                 if (resumoProvisaoRescisaoField && resumoProvisaoRescisaoField.value) {
                     data['Total Provisão para Rescisão'] = resumoProvisaoRescisaoField.value;
@@ -2427,103 +2497,6 @@ class FileExporter {
         }
         
         return beneficios;
-    }
-
-    // Mapear dados para títulos corretos
-    mapDataToCorrectTitles(originalData, beneficiosData) {
-        const mappedData = { ...beneficiosData }; // Incluir dados dos benefícios
-
-        // Mapear campos originais para títulos corretos
-        const titleMapping = {
-            'CNPJ': 'CNPJ',
-            'Nome do Cliente': 'Nome do Cliente',
-            'Responsável pela Proposta': 'Responsável pela Proposta',
-            'Cargo': 'Cargo',
-            'Regime Tributário da Empresa': 'Regime Tributário da Empresa',
-            'Quantidade': 'Quantidade',
-            'Salário Bruto do Colaborador': 'Salário Bruto do Colaborador',
-            'Data Base': 'Data Base',
-            '13º (Décimo-terceiro) Salário': '13º (Décimo-terceiro) Salário',
-            '1/3 Férias Proporcionais': '1/3 Férias Proporcionais',
-            'Férias Proporcionais': 'Férias Proporcionais',
-            'INSS': 'INSS',
-            'Salário Educação': 'Salário Educação',
-            'SAT (Seguro Acidente de Trabalho)': 'SAT (Seguro Acidente de Trabalho)',
-            'SESC ou SESI': 'SESC ou SESI',
-            'SENAI - SENAC': 'SENAI - SENAC',
-            'SEBRAE': 'SEBRAE',
-            'INCRA': 'INCRA',
-            'FGTS': 'FGTS',
-            'Valor Passagem Diária (Ida e Volta)': 'Valor Passagem Diária (Ida e Volta)',
-            'Total Mensal (23 dias)': 'Total Mensal (23 dias)',
-            'Desconto Funcionário (6% do Salário Bruto)': 'Desconto Funcionário (6% do Salário Bruto)',
-            'Auxílio-Refeição - Valor Diário': 'Auxílio-Refeição - Valor Diário',
-            'Auxílio-Refeição - Total Mensal (23 dias)': 'Auxílio-Refeição - Total Mensal (23 dias)',
-            'Aviso Prévio Indenizado': 'Aviso Prévio Indenizado',
-            'Incidência do FGTS sobre Aviso Prévio Indenizado': 'Incidência do FGTS sobre Aviso Prévio Indenizado',
-            'Multa do FGTS sobre Aviso Prévio Indenizado': 'Multa do FGTS sobre Aviso Prévio Indenizado',
-            // Totais do Bloco 6 com palavra "Total"
-            '2 - Salário Bruto do Colaborador': 'Total Salário Bruto do Colaborador',
-            '3 - Encargos e Benefícios Anuais, Mensais e Diários': 'Total Encargos e Benefícios Anuais, Mensais e Diários',
-            '4 - Provisão para Rescisão': 'Total Provisão para Rescisão',
-            '5 - Benefícios/Despesas Adicionais': 'Total Benefícios/Despesas Adicionais',
-            'Total por empregado': 'TOTAL GERAL POR EMPREGADO',
-            // Bloco 7 e 8
-            'Percentual de Custos Adicionais': 'Percentual de Custos Adicionais',
-            'Valor dos Custos Adicionais': 'Valor dos Custos Adicionais',
-            'PIS': 'PIS',
-            'COFINS': 'COFINS',
-            'ISS': 'ISS',
-            'Alíquota do Simples Nacional': 'Alíquota do Simples Nacional',
-            'Valor do Tributo Simples Nacional': 'Valor do Tributo Simples Nacional',
-            'Percentual de Margem de Lucro': 'Percentual de Margem de Lucro',
-            'Valor Total com Margem': 'Valor Total com Margem',
-            'Base de Cálculo para Tributos': 'Base de Cálculo para Tributos',
-            // Totais finais
-            'Total Bloco 7': 'Custos Adicionais e Tributos',
-            'Margem de Lucro': 'Margem de Lucro',
-            'Total por empregado': 'Total por empregado'
-        };
-
-        // Aplicar mapeamento
-        Object.keys(originalData).forEach(originalKey => {
-            const mappedKey = this.findBestMatch(originalKey, titleMapping);
-            if (mappedKey) {
-                mappedData[mappedKey] = originalData[originalKey];
-            }
-        });
-
-        // Adicionar total múltiplos empregados se aplicável
-        const quantidadeField = document.getElementById('quantidade');
-        const quantidade = parseInt(quantidadeField?.value) || 1;
-        const totalMultiplosDiv = document.getElementById('totalMultiplosEmpregados');
-        const resumoFinalTotalMultiplo = document.getElementById('resumoFinalTotalMultiplo');
-        
-        if (quantidade > 1 && totalMultiplosDiv && totalMultiplosDiv.style.display !== 'none' && 
-            resumoFinalTotalMultiplo && resumoFinalTotalMultiplo.value !== 'R$ 0,00') {
-            mappedData[`Total para ${quantidade} Empregados`] = resumoFinalTotalMultiplo.value;
-        }
-
-        return mappedData;
-    }
-
-    // Encontrar melhor correspondência para mapeamento
-    findBestMatch(originalKey, titleMapping) {
-        // Busca exata
-        if (titleMapping[originalKey]) {
-            return titleMapping[originalKey];
-        }
-
-        // Busca por correspondência parcial
-        for (const [mappedTitle, csvTitle] of Object.entries(titleMapping)) {
-            if (originalKey.toLowerCase().includes(mappedTitle.toLowerCase()) || 
-                mappedTitle.toLowerCase().includes(originalKey.toLowerCase())) {
-                return csvTitle;
-            }
-        }
-
-        // Se não encontrou, usar a chave original
-        return originalKey;
     }
 
     // Download do arquivo CSV
