@@ -482,8 +482,8 @@ body {
     
     .submodule-title {
         font-size: 0.9rem;
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
         gap: 0.5rem;
         margin-bottom: 0.8rem;
         word-wrap: break-word;
@@ -493,10 +493,13 @@ body {
         max-width: 100%;
         text-align: left;
         justify-content: flex-start;
+        flex-wrap: wrap;
     }
     
     .submodule-title::before {
         align-self: flex-start;
+        flex-shrink: 0;
+        margin-right: 0.3rem;
     }
     
     .subtitle-total {
@@ -507,6 +510,8 @@ body {
         align-self: flex-start;
         gap: 0.5rem;
         text-align: left;
+        order: 2;
+        flex-basis: 100%;
     }
     
     .subtotal-input {
@@ -992,8 +997,8 @@ select.form-input option {
     
     .submodule-title {
         font-size: 0.9rem;
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
         gap: 0.5rem;
         margin-bottom: 0.8rem;
         word-wrap: break-word;
@@ -1003,10 +1008,13 @@ select.form-input option {
         max-width: 100%;
         text-align: left;
         justify-content: flex-start;
+        flex-wrap: wrap;
     }
     
     .submodule-title::before {
         align-self: flex-start;
+        flex-shrink: 0;
+        margin-right: 0.3rem;
     }
     
     .subtitle-total {
@@ -1017,6 +1025,8 @@ select.form-input option {
         align-self: flex-start;
         gap: 0.5rem;
         text-align: left;
+        order: 2;
+        flex-basis: 100%;
     }
     
     .subtotal-input {
