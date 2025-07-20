@@ -770,6 +770,12 @@
                     <label class="form-label"><strong>Total por empregado</strong></label>
                     <input type="text" id="resumoFinalTotalGeral" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00" style="font-weight: bold; font-size: 1.1rem; border-width: 3px;">
                 </div>
+
+                <!-- TOTAL PARA MÚLTIPLOS EMPREGADOS (só aparece quando quantidade > 1) -->
+                <div class="form-group" id="totalMultiplosEmpregados" style="display: none;">
+                    <label class="form-label" id="labelTotalMultiplos"><strong>Total para X Empregados</strong></label>
+                    <input type="text" id="resumoFinalTotalMultiplo" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00" style="font-weight: bold; font-size: 1.2rem; border-width: 4px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important; color: white !important;">
+                </div>
             </div>
         </section>
 
