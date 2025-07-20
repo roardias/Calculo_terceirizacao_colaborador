@@ -2139,25 +2139,18 @@ class FileExporter {
     // Exportar para CSV
     exportToCSV() {
         try {
-            console.log('🔄 Iniciando exportação CSV...');
-            
             const data = this.collectAllData();
-            console.log('📊 Dados coletados:', data);
-            
             const csv = this.convertToCSV(data);
-            console.log('📄 CSV gerado:', csv.substring(0, 200) + '...');
             
             const nomeCliente = document.getElementById('nomeCliente')?.value || 'Cliente';
             const dataBase = document.getElementById('dataBase')?.value || new Date().toISOString().split('T')[0];
             const filename = `Calculadora_Terceirizacao_${nomeCliente.replace(/[^a-zA-Z0-9]/g, '_')}_${dataBase}.csv`;
             
             this.downloadCSV(csv, filename);
-            console.log('✅ CSV exportado com sucesso');
             
         } catch (error) {
-            console.error('❌ Erro detalhado ao gerar CSV:', error);
-            console.error('Stack trace:', error.stack);
-            alert(`Erro ao gerar CSV: ${error.message}\n\nVerifique o console para mais detalhes.`);
+            console.error('❌ Erro ao gerar CSV:', error);
+            alert(`Erro ao gerar CSV: ${error.message}`);
         }
     }
 
@@ -2294,8 +2287,8 @@ class FileExporter {
 
     // Converter dados para formato CSV
     convertToCSV(data) {
-        // Definir ordem exata das colunas conforme solicitado
-        const exactColumnOrder = [
+        // Lista simples dos campos na ordem exata solicitada
+        const headers = [
             'CNPJ',
             'Nome do Cliente', 
             'Responsável pela Proposta',
@@ -2322,27 +2315,7 @@ class FileExporter {
             'Auxílio-Refeição - Total Mensal (23 dias)',
             'Aviso Prévio Indenizado',
             'Incidência do FGTS sobre Aviso Prévio Indenizado',
-            'Multa do FGTS sobre Aviso Prévio Indenizado'
-        ];
-
-        // Coletar dados específicos dos benefícios/despesas (Bloco 5)
-        const beneficiosData = this.collectBeneficiosData();
-        
-        // Adicionar colunas dos benefícios à ordem
-        const beneficiosColumns = [];
-        for (let i = 1; i <= 5; i++) {
-            const tipoField = document.getElementById(`tipoCusto${i}`);
-            const valorField = document.getElementById(`valorCusto${i}`);
-            
-            if (tipoField && tipoField.value.trim() && valorField && valorField.value.trim() && valorField.value !== 'R$ 0,00') {
-                const tipoCusto = tipoField.value.trim();
-                beneficiosColumns.push(`Benefício/Despesa ${i}`);
-                beneficiosColumns.push(`${tipoCusto} R$`);
-            }
-        }
-
-        // Continuar com as colunas finais
-        const finalColumns = [
+            'Multa do FGTS sobre Aviso Prévio Indenizado',
             'Total Salário Bruto do Colaborador',
             'Total Encargos e Benefícios Anuais, Mensais e Diários',
             'Total Provisão para Rescisão',
@@ -2363,54 +2336,50 @@ class FileExporter {
             'Total por empregado'
         ];
 
-        // Verificar se existe total para múltiplos empregados
-        const totalMultiplosDiv = document.getElementById('totalMultiplosEmpregados');
-        const resumoFinalTotalMultiplo = document.getElementById('resumoFinalTotalMultiplo');
-        const quantidadeField = document.getElementById('quantidade');
-        const quantidade = parseInt(quantidadeField?.value) || 1;
-        
-        if (totalMultiplosDiv && totalMultiplosDiv.style.display !== 'none' && 
-            resumoFinalTotalMultiplo && resumoFinalTotalMultiplo.value !== 'R$ 0,00' && quantidade > 1) {
-            finalColumns.push(`Total para ${quantidade} Empregados`);
-        }
-
-        // Combinar todas as colunas na ordem correta
-        const orderedHeaders = [...exactColumnOrder, ...beneficiosColumns, ...finalColumns];
-
-        // Mapear dados para títulos corretos
-        const mappedData = this.mapDataToCorrectTitles(data, beneficiosData);
-
-        // Função para escapar campos CSV (tratar vírgulas, aspas, etc.)
-        const escapeCSVField = (field) => {
-            const fieldStr = String(field || '');
-            if (fieldStr.includes(',') || fieldStr.includes('"') || fieldStr.includes('\n') || fieldStr.includes('\r')) {
-                const escaped = fieldStr.replace(/"/g, '""');
-                return `"${escaped}"`;
-            }
-            return fieldStr;
-        };
-
-        // Criar linha de cabeçalho
-        const headerLine = orderedHeaders.map(escapeCSVField).join(',');
-
-        // Criar linha de valores na ordem correta
-        const valueLine = orderedHeaders.map(header => {
-            let value = mappedData[header] || '';
+        // Valores correspondentes - buscar diretamente nos campos do DOM
+        const values = headers.map(header => {
+            let value = '';
             
-            // Tratar desconto funcionário como negativo
-            if (header === 'Desconto Funcionário (6% do Salário Bruto)' && value) {
-                value = value.replace('R$ ', 'R$ -');
+            // Buscar valor nos dados coletados primeiro
+            if (data[header]) {
+                value = data[header];
+            } else {
+                // Buscar diretamente nos campos específicos
+                switch (header) {
+                    case 'Total Salário Bruto do Colaborador':
+                        value = document.getElementById('resumoSalarioBruto')?.value || '';
+                        break;
+                    case 'Total Encargos e Benefícios Anuais, Mensais e Diários':
+                        value = document.getElementById('resumoEncargos')?.value || '';
+                        break;
+                    case 'Total Provisão para Rescisão':
+                        value = document.getElementById('resumoProvisaoRescisao')?.value || '';
+                        break;
+                    case 'Total Benefícios/Despesas Adicionais':
+                        value = document.getElementById('resumoCustosAdicionais')?.value || '';
+                        break;
+                    case 'TOTAL GERAL POR EMPREGADO':
+                        value = document.getElementById('resumoTotalGeral')?.value || '';
+                        break;
+                    case 'Total por empregado':
+                        value = document.getElementById('resumoFinalTotalGeral')?.value || '';
+                        break;
+                    case 'Desconto Funcionário (6% do Salário Bruto)':
+                        const desconto = document.getElementById('descontoFuncionario')?.value || '';
+                        value = desconto ? desconto.replace('R$ ', 'R$ -') : '';
+                        break;
+                    default:
+                        // Manter valor dos dados coletados ou vazio
+                        value = '';
+                }
             }
             
-            return escapeCSVField(value);
-        }).join(',');
+            return value || '';
+        });
 
-        return headerLine + '\n' + valueLine;
-    }
-
-    // Coletar dados específicos dos benefícios/despesas
-    collectBeneficiosData() {
-        const beneficios = {};
+        // Adicionar benefícios/despesas se existirem
+        const extraHeaders = [];
+        const extraValues = [];
         
         for (let i = 1; i <= 5; i++) {
             const tipoField = document.getElementById(`tipoCusto${i}`);
@@ -2418,12 +2387,43 @@ class FileExporter {
             
             if (tipoField && tipoField.value.trim() && valorField && valorField.value.trim() && valorField.value !== 'R$ 0,00') {
                 const tipoCusto = tipoField.value.trim();
-                beneficios[`Benefício/Despesa ${i}`] = tipoCusto;
-                beneficios[`${tipoCusto} R$`] = valorField.value;
+                extraHeaders.push(`Benefício/Despesa ${i}`);
+                extraHeaders.push(`${tipoCusto} R$`);
+                extraValues.push(tipoCusto);
+                extraValues.push(valorField.value);
             }
         }
+
+        // Adicionar total múltiplos empregados se aplicável
+        const quantidadeField = document.getElementById('quantidade');
+        const quantidade = parseInt(quantidadeField?.value) || 1;
         
-        return beneficios;
+        if (quantidade > 1) {
+            const totalMultiploField = document.getElementById('resumoFinalTotalMultiplo');
+            if (totalMultiploField && totalMultiploField.value !== 'R$ 0,00') {
+                extraHeaders.push(`Total para ${quantidade} Empregados`);
+                extraValues.push(totalMultiploField.value);
+            }
+        }
+
+        // Combinar headers e values
+        const finalHeaders = [...headers, ...extraHeaders];
+        const finalValues = [...values, ...extraValues];
+
+        // Função para escapar campos CSV
+        const escapeCSV = (field) => {
+            const str = String(field || '');
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        };
+
+        // Gerar CSV
+        const headerLine = finalHeaders.map(escapeCSV).join(',');
+        const valueLine = finalValues.map(escapeCSV).join(',');
+
+        return headerLine + '\n' + valueLine;
     }
 
     // Download do arquivo CSV
