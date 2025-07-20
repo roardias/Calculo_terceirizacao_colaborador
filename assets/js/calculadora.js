@@ -1782,11 +1782,361 @@ class CalculadoraTerceirizacao {
     }
 }
 
+// EXPORTADOR DE ARQUIVOS
+class FileExporter {
+    constructor() {
+        this.initializeExportButtons();
+    }
+
+    initializeExportButtons() {
+        const pdfBtn = document.getElementById('exportPdfBtn');
+        const csvBtn = document.getElementById('exportCsvBtn');
+
+        if (pdfBtn) {
+            pdfBtn.addEventListener('click', () => this.exportToPDF());
+        }
+
+        if (csvBtn) {
+            csvBtn.addEventListener('click', () => this.exportToCSV());
+        }
+
+        // Verificar se deve habilitar botões
+        this.checkExportButtonsStatus();
+    }
+
+    // Verificar se todos os campos obrigatórios estão preenchidos
+    checkExportButtonsStatus() {
+        const requiredFields = [
+            'cnpj', 'nomeCliente', 'responsavelProposta',
+            'cargo', 'regimeTributario', 'quantidade', 'salarioBruto', 'dataBase',
+            'valorPassagemDiaria', 'auxilioRefeicaoValorDiario', 'percentualMargemLucro'
+        ];
+
+        // Verificar campos condicionais baseados no regime tributário
+        const regimeTributario = document.getElementById('regimeTributario')?.value;
+        if (regimeTributario === 'simples') {
+            requiredFields.push('aliquotaSimplesNacional');
+        }
+
+        const allFieldsFilled = requiredFields.every(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (!field) return true; // Campo não existe, considerar como preenchido
+            
+            const value = field.value.trim();
+            return value && value !== '' && value !== 'R$ 0,00' && value !== '0,00%';
+        });
+
+        const pdfBtn = document.getElementById('exportPdfBtn');
+        const csvBtn = document.getElementById('exportCsvBtn');
+
+        if (pdfBtn) pdfBtn.disabled = !allFieldsFilled;
+        if (csvBtn) csvBtn.disabled = !allFieldsFilled;
+    }
+
+    // Exportar para PDF
+    async exportToPDF() {
+        try {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            // Configurações
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 15;
+            const contentWidth = pageWidth - (margin * 2);
+            
+            // Cabeçalho
+            this.addPDFHeader(pdf, margin, contentWidth);
+            
+            let currentY = 40;
+            const blockMargin = 10;
+            
+            // Processar cada bloco
+            const blocks = document.querySelectorAll('.calculation-block');
+            
+            for (let i = 0; i < blocks.length; i++) {
+                const block = blocks[i];
+                
+                // Calcular altura necessária do bloco
+                const blockHeight = this.calculateBlockHeight(block);
+                
+                // Verificar se precisa de nova página
+                if (currentY + blockHeight > pageHeight - margin - 30) { // 30 para assinatura
+                    pdf.addPage();
+                    currentY = margin;
+                }
+                
+                // Adicionar bloco ao PDF
+                currentY = await this.addBlockToPDF(pdf, block, currentY, margin, contentWidth);
+                currentY += blockMargin;
+            }
+            
+            // Adicionar área de assinatura
+            this.addSignatureArea(pdf, pageHeight, margin, contentWidth);
+            
+            // Salvar PDF
+            const nomeCliente = document.getElementById('nomeCliente')?.value || 'Cliente';
+            const dataBase = document.getElementById('dataBase')?.value || new Date().toISOString().split('T')[0];
+            const filename = `Calculadora_Terceirizacao_${nomeCliente.replace(/[^a-zA-Z0-9]/g, '_')}_${dataBase}.pdf`;
+            
+            pdf.save(filename);
+            
+        } catch (error) {
+            console.error('Erro ao gerar PDF:', error);
+            alert('Erro ao gerar PDF. Tente novamente.');
+        }
+    }
+
+    // Adicionar cabeçalho do PDF
+    addPDFHeader(pdf, margin, contentWidth) {
+        // Título
+        pdf.setFontSize(18);
+        pdf.setTextColor(18, 35, 66); // Primary dark
+        pdf.text('Calculadora de Custo de Terceirização', margin, margin + 10);
+        
+        // Subtítulo
+        pdf.setFontSize(12);
+        pdf.setTextColor(108, 117, 125); // Gray
+        pdf.text('Sistema Profissional para Cálculo de Propostas Comerciais', margin, margin + 18);
+        
+        // Data de geração
+        const today = new Date().toLocaleDateString('pt-BR');
+        pdf.setFontSize(10);
+        pdf.text(`Gerado em: ${today}`, margin, margin + 26);
+        
+        // Linha separadora
+        pdf.setDrawColor(190, 163, 105); // Primary gold
+        pdf.setLineWidth(0.5);
+        pdf.line(margin, margin + 30, margin + contentWidth, margin + 30);
+    }
+
+    // Calcular altura do bloco (estimativa)
+    calculateBlockHeight(block) {
+        const title = block.querySelector('.block-title');
+        const submodules = block.querySelectorAll('.submodule');
+        const formGroups = block.querySelectorAll('.form-group');
+        
+        let height = 15; // Título
+        height += submodules.length * 20; // Submódulos
+        height += Math.ceil(formGroups.length / 2) * 8; // Campos (2 por linha)
+        
+        return height;
+    }
+
+    // Adicionar bloco ao PDF
+    async addBlockToPDF(pdf, block, startY, margin, contentWidth) {
+        let currentY = startY;
+        
+        // Título do bloco
+        const blockTitle = block.querySelector('.block-title');
+        const blockNumber = blockTitle.querySelector('.block-number')?.textContent || '';
+        const blockText = blockTitle.querySelector('.block-text')?.textContent || blockTitle.textContent;
+        const titleTotal = blockTitle.querySelector('.total-input')?.value || '';
+        
+        pdf.setFontSize(14);
+        pdf.setTextColor(18, 35, 66);
+        pdf.text(`${blockNumber} - ${blockText}`, margin, currentY);
+        
+        if (titleTotal && titleTotal !== 'R$ 0,00') {
+            pdf.setFontSize(12);
+            pdf.text(`Total: ${titleTotal}`, margin + contentWidth - 40, currentY);
+        }
+        
+        currentY += 8;
+        
+        // Linha separadora
+        pdf.setDrawColor(190, 163, 105);
+        pdf.setLineWidth(0.2);
+        pdf.line(margin, currentY, margin + contentWidth, currentY);
+        currentY += 5;
+        
+        // Campos do bloco
+        const formGroups = block.querySelectorAll('.form-group');
+        let fieldsPerRow = 0;
+        let rowStartY = currentY;
+        
+        formGroups.forEach((group, index) => {
+            const label = group.querySelector('.form-label')?.textContent || '';
+            const input = group.querySelector('.form-input');
+            const value = input?.value || '';
+            
+            if (label && value && value !== 'R$ 0,00' && value !== '0,00%') {
+                pdf.setFontSize(9);
+                pdf.setTextColor(0, 0, 0);
+                
+                const fieldWidth = contentWidth / 2 - 5;
+                const xPos = margin + (fieldsPerRow % 2) * (fieldWidth + 10);
+                
+                // Label
+                pdf.text(label.substring(0, 35) + (label.length > 35 ? '...' : ''), xPos, rowStartY);
+                // Valor
+                pdf.setTextColor(18, 35, 66);
+                pdf.text(value, xPos, rowStartY + 4);
+                
+                fieldsPerRow++;
+                if (fieldsPerRow % 2 === 0) {
+                    rowStartY += 10;
+                }
+            }
+        });
+        
+        // Ajustar currentY baseado na última linha usada
+        if (fieldsPerRow % 2 !== 0) {
+            rowStartY += 10;
+        }
+        
+        return rowStartY + 5;
+    }
+
+    // Adicionar área de assinatura
+    addSignatureArea(pdf, pageHeight, margin, contentWidth) {
+        const signatureY = pageHeight - 40;
+        
+        // Quadrado para assinatura digital
+        pdf.setDrawColor(0, 0, 0);
+        pdf.setLineWidth(0.5);
+        pdf.rect(margin, signatureY - 20, 60, 20);
+        
+        // Texto
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Assinatura Digital:', margin, signatureY - 25);
+        pdf.text('Data: ___/___/______', margin + 70, signatureY - 10);
+        
+        // Linha para assinatura manual
+        pdf.line(margin + 70, signatureY, margin + contentWidth, signatureY);
+        pdf.text('Responsável pela Proposta', margin + 70, signatureY + 5);
+    }
+
+    // Exportar para CSV
+    exportToCSV() {
+        try {
+            const data = this.collectAllData();
+            const csv = this.convertToCSV(data);
+            
+            const nomeCliente = document.getElementById('nomeCliente')?.value || 'Cliente';
+            const dataBase = document.getElementById('dataBase')?.value || new Date().toISOString().split('T')[0];
+            const filename = `Calculadora_Terceirizacao_${nomeCliente.replace(/[^a-zA-Z0-9]/g, '_')}_${dataBase}.csv`;
+            
+            this.downloadCSV(csv, filename);
+            
+        } catch (error) {
+            console.error('Erro ao gerar CSV:', error);
+            alert('Erro ao gerar CSV. Tente novamente.');
+        }
+    }
+
+    // Coletar todos os dados do formulário
+    collectAllData() {
+        const data = [];
+        
+        // Adicionar cabeçalho
+        data.push(['Campo', 'Valor', 'Bloco', 'Tipo']);
+        
+        // Coletar dados de cada bloco
+        const blocks = document.querySelectorAll('.calculation-block');
+        
+        blocks.forEach((block, blockIndex) => {
+            const blockTitle = block.querySelector('.block-title');
+            const blockNumber = blockTitle.querySelector('.block-number')?.textContent || (blockIndex + 1);
+            const blockText = blockTitle.querySelector('.block-text')?.textContent || blockTitle.textContent;
+            const blockName = `${blockNumber} - ${blockText}`;
+            
+            // Total do bloco
+            const titleTotal = blockTitle.querySelector('.total-input')?.value;
+            if (titleTotal && titleTotal !== 'R$ 0,00') {
+                data.push([`Total do Bloco ${blockNumber}`, titleTotal, blockName, 'Total']);
+            }
+            
+            // Campos do bloco
+            const formGroups = block.querySelectorAll('.form-group');
+            formGroups.forEach(group => {
+                const label = group.querySelector('.form-label')?.textContent?.replace(/\n/g, ' ').trim() || '';
+                const input = group.querySelector('.form-input');
+                const value = input?.value || '';
+                
+                if (label && value && value !== 'R$ 0,00' && value !== '0,00%' && value !== '') {
+                    const isCalculated = input?.classList.contains('calculation-result');
+                    const type = isCalculated ? 'Calculado' : 'Informado';
+                    data.push([label, value, blockName, type]);
+                }
+            });
+            
+            // Submódulos
+            const submodules = block.querySelectorAll('.submodule');
+            submodules.forEach(submodule => {
+                const subTitle = submodule.querySelector('.submodule-title')?.textContent?.replace(/\n/g, ' ').trim() || '';
+                const subTotal = submodule.querySelector('.subtotal-input')?.value;
+                
+                if (subTotal && subTotal !== 'R$ 0,00') {
+                    data.push([`Subtotal: ${subTitle}`, subTotal, blockName, 'Subtotal']);
+                }
+            });
+        });
+        
+        return data;
+    }
+
+    // Converter dados para formato CSV
+    convertToCSV(data) {
+        return data.map(row => 
+            row.map(field => {
+                // Escapar aspas e adicionar aspas se necessário
+                const escaped = String(field || '').replace(/"/g, '""');
+                return `"${escaped}"`;
+            }).join(',')
+        ).join('\n');
+    }
+
+    // Download do arquivo CSV
+    downloadCSV(csv, filename) {
+        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        if (link.download !== undefined) {
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    }
+}
+
 // Inicializar aplicação
 const calculadora = new CalculadoraTerceirizacao();
+const fileExporter = new FileExporter();
 
 // Disponibilizar globalmente
 if (typeof window !== 'undefined') {
     window.calculadora = calculadora;
+    window.fileExporter = fileExporter;
     window.FormValidator = FormValidator;
 }
+
+// Conectar verificação de status dos botões de exportação aos eventos de input
+document.addEventListener('DOMContentLoaded', () => {
+    // Adicionar listener para todos os inputs que podem afetar a validação
+    const inputs = document.querySelectorAll('input, select');
+    inputs.forEach(input => {
+        input.addEventListener('input', () => {
+            // Pequeno delay para permitir que máscaras sejam aplicadas
+            setTimeout(() => {
+                fileExporter.checkExportButtonsStatus();
+            }, 100);
+        });
+        
+        input.addEventListener('change', () => {
+            setTimeout(() => {
+                fileExporter.checkExportButtonsStatus();
+            }, 100);
+        });
+    });
+    
+    // Verificação inicial
+    setTimeout(() => {
+        fileExporter.checkExportButtonsStatus();
+    }, 500);
+});
