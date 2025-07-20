@@ -440,14 +440,19 @@ body {
 @media (max-width: 768px) {
     /* Container principal */
     .container {
-        padding: 1.5rem 1rem;
+        padding: 1rem 0.5rem;
+        max-width: 100vw;
+        overflow-x: hidden;
     }
     
     /* Blocos de cálculo */
     .calculation-block {
-        padding: 1.5rem 1rem;
+        padding: 1rem 0.8rem;
         margin-bottom: 1.5rem;
         border-radius: 12px;
+        max-width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
     }
     
     .custos-adicionais-grid {
@@ -458,73 +463,123 @@ body {
     .custos-adicionais-grid .form-label {
         white-space: normal;
         text-overflow: initial;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        font-size: 0.85rem;
+        line-height: 1.2;
     }
     
     /* Submódulos responsivos */
     .submodule {
-        padding: 1rem;
+        padding: 0.8rem 0.6rem;
         margin-bottom: 1rem;
-        overflow: hidden; /* Evita overflow dos elementos filhos */
+        overflow: hidden;
         border-radius: 8px;
+        max-width: 100%;
+        box-sizing: border-box;
     }
     
     .submodule-title {
-        font-size: 1rem;
-        flex-wrap: wrap;
-        gap: 0.3rem;
+        font-size: 0.9rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
         margin-bottom: 0.8rem;
         word-wrap: break-word;
         overflow-wrap: break-word;
         hyphens: auto;
+        line-height: 1.3;
+        max-width: 100%;
     }
     
     .subtitle-total {
         width: 100%;
         justify-content: space-between;
-        margin-top: 0.5rem;
+        margin-top: 0.3rem;
         margin-left: 0;
+        align-self: stretch;
     }
     
     .subtotal-input {
-        min-width: 80px;
-        font-size: 0.8rem;
-        padding: 0.25rem 0.5rem;
+        min-width: 70px;
+        max-width: 120px;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+        word-wrap: break-word;
     }
     
     .calculation-display {
         flex-direction: column;
         align-items: stretch;
-        gap: 0.5rem;
+        gap: 0.4rem;
+        width: 100%;
+        max-width: 100%;
     }
     
     .calculation-percent {
         align-self: flex-start;
         min-width: auto;
-        font-size: 0.8rem;
-        padding: 0.4rem 0.6rem;
+        max-width: fit-content;
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     
     .calculation-result {
-        width: 100%;
-        min-width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        font-size: 0.9rem;
-        padding: 0.75rem 0.8rem;
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 0.85rem;
+        padding: 0.6rem 0.5rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
     
     /* Grid responsivo para campos */
     .form-grid {
         grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 0.8rem;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .form-group {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .form-label {
+        font-size: 0.85rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.2;
+        margin-bottom: 0.3rem;
+    }
+    
+    .form-input {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 0.85rem;
+        padding: 0.6rem 0.5rem;
     }
     
     /* Títulos dos blocos responsivos */
     .block-title {
-        font-size: 1.3rem;
-        flex-wrap: wrap;
+        font-size: 1.1rem;
+        flex-direction: column;
+        align-items: flex-start;
         gap: 0.5rem;
         text-align: left;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.2;
     }
     
     .title-total {
@@ -532,12 +587,21 @@ body {
         margin-left: 0;
         margin-top: 0.5rem;
         justify-content: space-between;
+        align-self: stretch;
     }
     
     .total-input {
-        min-width: 90px;
-        font-size: 0.85rem;
-        padding: 0.35rem 0.6rem;
+        min-width: 80px;
+        max-width: 140px;
+        font-size: 0.8rem;
+        padding: 0.3rem 0.5rem;
+        word-wrap: break-word;
+    }
+    
+    .total-label {
+        font-size: 0.8rem;
+        color: var(--primary-dark);
+        font-weight: 600;
     }
     
     /* Header responsivo */
@@ -568,12 +632,16 @@ body {
     }
     
     .header h1 {
-        font-size: 2rem;
+        font-size: 1.8rem;
         margin-bottom: 0.3rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
     
     .header p {
-        font-size: 1rem;
+        font-size: 0.9rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
 }
 
@@ -826,5 +894,227 @@ select.form-input option {
     .custos-adicionais-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 0.8rem;
+    }
+}
+
+/* Prevenção de overflow horizontal global */
+@media (max-width: 768px) {
+    * {
+        max-width: 100vw;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        box-sizing: border-box;
+    }
+    
+    body {
+        overflow-x: hidden;
+        width: 100vw;
+        max-width: 100vw;
+    }
+    
+    /* Container principal */
+    .container {
+        padding: 1rem 0.5rem;
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+    
+    /* Blocos de cálculo */
+    .calculation-block {
+        padding: 1rem 0.8rem;
+        margin-bottom: 1.5rem;
+        border-radius: 12px;
+        max-width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+    
+    .custos-adicionais-grid {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .custos-adicionais-grid .form-label {
+        white-space: normal;
+        text-overflow: initial;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        font-size: 0.85rem;
+        line-height: 1.2;
+    }
+    
+    /* Submódulos responsivos */
+    .submodule {
+        padding: 0.8rem 0.6rem;
+        margin-bottom: 1rem;
+        overflow: hidden;
+        border-radius: 8px;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .submodule-title {
+        font-size: 0.9rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        margin-bottom: 0.8rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        hyphens: auto;
+        line-height: 1.3;
+        max-width: 100%;
+    }
+    
+    .subtitle-total {
+        width: 100%;
+        justify-content: space-between;
+        margin-top: 0.3rem;
+        margin-left: 0;
+        align-self: stretch;
+    }
+    
+    .subtotal-input {
+        min-width: 70px;
+        max-width: 120px;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+        word-wrap: break-word;
+    }
+    
+    .calculation-display {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.4rem;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .calculation-percent {
+        align-self: flex-start;
+        min-width: auto;
+        max-width: fit-content;
+        font-size: 0.75rem;
+        padding: 0.3rem 0.5rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    .calculation-result {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 0.85rem;
+        padding: 0.6rem 0.5rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+    
+    /* Grid responsivo para campos */
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 0.8rem;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .form-group {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .form-label {
+        font-size: 0.85rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.2;
+        margin-bottom: 0.3rem;
+    }
+    
+    .form-input {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        font-size: 0.85rem;
+        padding: 0.6rem 0.5rem;
+    }
+    
+    /* Títulos dos blocos responsivos */
+    .block-title {
+        font-size: 1.1rem;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        text-align: left;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.2;
+    }
+    
+    .title-total {
+        width: 100%;
+        margin-left: 0;
+        margin-top: 0.5rem;
+        justify-content: space-between;
+        align-self: stretch;
+    }
+    
+    .total-input {
+        min-width: 80px;
+        max-width: 140px;
+        font-size: 0.8rem;
+        padding: 0.3rem 0.5rem;
+        word-wrap: break-word;
+    }
+    
+    .total-label {
+        font-size: 0.8rem;
+        color: var(--primary-dark);
+        font-weight: 600;
+    }
+    
+    /* Header responsivo */
+    .header-layout {
+        flex-direction: column;
+        text-align: center;
+        min-height: auto;
+        gap: 1rem;
+    }
+    
+    .header-logo {
+        margin-right: 0;
+        order: 1;
+    }
+    
+    .logo-image {
+        height: 50px;
+        max-width: 150px;
+    }
+    
+    .header-text {
+        order: 2;
+        margin: 0;
+    }
+    
+    .header-spacer {
+        display: none;
+    }
+    
+    .header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.3rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    .header p {
+        font-size: 0.9rem;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
     }
 }
