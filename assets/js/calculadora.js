@@ -1791,6 +1791,7 @@ class FileExporter {
     initializeExportButtons() {
         const pdfBtn = document.getElementById('exportPdfBtn');
         const csvBtn = document.getElementById('exportCsvBtn');
+        const debugBtn = document.getElementById('debugBtn');
 
         if (pdfBtn) {
             pdfBtn.addEventListener('click', () => this.exportToPDF());
@@ -1798,6 +1799,14 @@ class FileExporter {
 
         if (csvBtn) {
             csvBtn.addEventListener('click', () => this.exportToCSV());
+        }
+
+        if (debugBtn) {
+            debugBtn.addEventListener('click', () => {
+                console.clear();
+                this.checkExportButtonsStatus();
+                alert('Verifique o console do navegador (F12) para ver o status detalhado dos campos!');
+            });
         }
 
         // Verificar se deve habilitar botões
@@ -1818,19 +1827,48 @@ class FileExporter {
             requiredFields.push('aliquotaSimplesNacional');
         }
 
-        const allFieldsFilled = requiredFields.every(fieldId => {
+        console.log('🔍 Verificando campos obrigatórios para exportação...');
+        console.log('📋 Regime tributário:', regimeTributario);
+
+        const fieldStatus = {};
+        let allFieldsFilled = true;
+
+        requiredFields.forEach(fieldId => {
             const field = document.getElementById(fieldId);
-            if (!field) return true; // Campo não existe, considerar como preenchido
+            if (!field) {
+                fieldStatus[fieldId] = { exists: false, value: 'N/A', valid: true };
+                return;
+            }
             
             const value = field.value.trim();
-            return value && value !== '' && value !== 'R$ 0,00' && value !== '0,00%';
+            const isValid = value && value !== '' && value !== 'R$ 0,00' && value !== '0,00%';
+            
+            fieldStatus[fieldId] = {
+                exists: true,
+                value: value || '(vazio)',
+                valid: isValid
+            };
+
+            if (!isValid) {
+                allFieldsFilled = false;
+            }
         });
+
+        // Log detalhado dos campos
+        console.table(fieldStatus);
+        console.log('✅ Todos os campos preenchidos:', allFieldsFilled);
 
         const pdfBtn = document.getElementById('exportPdfBtn');
         const csvBtn = document.getElementById('exportCsvBtn');
 
-        if (pdfBtn) pdfBtn.disabled = !allFieldsFilled;
-        if (csvBtn) csvBtn.disabled = !allFieldsFilled;
+        if (pdfBtn) {
+            pdfBtn.disabled = !allFieldsFilled;
+            console.log('📄 Botão PDF:', allFieldsFilled ? 'HABILITADO' : 'DESABILITADO');
+        }
+        if (csvBtn) {
+            csvBtn.disabled = !allFieldsFilled;
+            console.log('📊 Botão CSV:', allFieldsFilled ? 'HABILITADO' : 'DESABILITADO');
+        }
     }
 
     // Exportar para PDF
