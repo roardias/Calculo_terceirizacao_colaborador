@@ -1261,3 +1261,88 @@ select.form-input option {
         overflow-wrap: break-word;
     }
 }
+
+/* BOTÕES DE EXPORTAÇÃO */
+.export-buttons-section {
+    margin-top: 3rem;
+    padding: 2rem 0;
+    border-top: 2px solid var(--gray-medium);
+    text-align: center;
+}
+
+.export-buttons-container {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.btn-export {
+    padding: 1rem 2rem;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 180px;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.btn-export:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: var(--gray-medium);
+    color: var(--gray-dark);
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-export:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-pdf {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: var(--white);
+}
+
+.btn-pdf:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c82333 0%, #a71e2a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220, 53, 69, 0.3);
+}
+
+.btn-csv {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: var(--white);
+}
+
+.btn-csv:hover:not(:disabled) {
+    background: linear-gradient(135deg, #20c997 0%, #17a2b8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
+}
+
+.btn-icon {
+    font-size: 1.2rem;
+    filter: none;
+}
+
+/* Responsividade para botões de exportação */
+@media (max-width: 768px) {
+    .export-buttons-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .btn-export {
+        width: 100%;
+        max-width: 300px;
+        margin: 0 auto;
+    }
+}
