@@ -923,6 +923,31 @@ select.form-input option {
         max-width: 100vw;
     }
     
+    /* Prevenir zoom automático em inputs */
+    input, select, textarea {
+        font-size: 16px !important;
+        -webkit-appearance: none;
+        border-radius: 0;
+    }
+    
+    /* Restaurar tamanhos específicos após prevenção de zoom */
+    .form-input {
+        font-size: 16px !important;
+        line-height: 1.4;
+    }
+    
+    .calculation-result {
+        font-size: 16px !important;
+    }
+    
+    .subtotal-input {
+        font-size: 14px !important;
+    }
+    
+    .total-input {
+        font-size: 14px !important;
+    }
+    
     /* Container principal */
     .container {
         padding: 1rem 0.5rem;
