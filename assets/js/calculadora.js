@@ -307,6 +307,51 @@ class CalculadoraTerceirizacao {
                         this.calculateEncargos(salarioBruto);
                     }
                 }
+                
+                // Forçar recálculo dos blocos 7 e 8
+                this.calculateResumoFinal();
+                this.calculateMargemLucro();
+                this.calculateCustosTributos();
+                this.calculateResumoFinal();
+            });
+        }
+
+        // Event listeners específicos para campos que afetam Blocos 7 e 8
+        const percentualMargemField = document.getElementById('percentualMargemLucro');
+        if (percentualMargemField) {
+            percentualMargemField.addEventListener('input', () => {
+                // Recalcular blocos 7 e 8 quando margem mudar
+                setTimeout(() => {
+                    this.calculateResumoFinal();
+                    this.calculateMargemLucro();
+                    this.calculateCustosTributos();
+                    this.calculateResumoFinal();
+                }, 100);
+            });
+        }
+
+        const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
+        if (aliquotaSimplesField) {
+            aliquotaSimplesField.addEventListener('input', () => {
+                // Recalcular tributos quando alíquota mudar
+                setTimeout(() => {
+                    this.calculateMargemLucro();
+                    this.calculateCustosTributos();
+                    this.calculateResumoFinal();
+                }, 100);
+            });
+        }
+
+        const percentualCustosField = document.getElementById('percentualCustosAdicionais');
+        if (percentualCustosField) {
+            percentualCustosField.addEventListener('input', () => {
+                // Recalcular bloco 7 quando custos adicionais mudarem
+                setTimeout(() => {
+                    this.calculateResumoFinal();
+                    this.calculateMargemLucro();
+                    this.calculateCustosTributos();
+                    this.calculateResumoFinal();
+                }, 100);
             });
         }
     }
@@ -744,6 +789,28 @@ class CalculadoraTerceirizacao {
     handleFieldChange(field) {
         this.formData[field.id] = field.value;
         this.updateCalculations();
+        
+        // Forçar cálculo dos blocos 7 e 8 sempre que houver mudanças significativas
+        const camposCriticos = [
+            'salarioBruto', 'valorPassagemDiaria', 'auxilioRefeicaoValorDiario',
+            'regimeTributario', 'percentualMargemLucro', 'percentualCustosAdicionais',
+            'aliquotaSimplesNacional'
+        ];
+        
+        // Para campos de custos adicionais também
+        for (let i = 1; i <= 5; i++) {
+            camposCriticos.push(`valorCusto${i}`);
+        }
+        
+        if (camposCriticos.includes(field.id)) {
+            // Aguardar um pouco para garantir que outros cálculos terminaram
+            setTimeout(() => {
+                this.calculateResumoFinal();
+                this.calculateMargemLucro();
+                this.calculateCustosTributos();
+                this.calculateResumoFinal();
+            }, 150);
+        }
     }
 
     updateCalculations() {
@@ -789,13 +856,16 @@ class CalculadoraTerceirizacao {
         // Calcular subtotais dos blocos
         this.calculateSubtotals();
         
-        // Calcular custos adicionais e tributos (Bloco 7)
-        this.calculateCustosTributos();
+        // Calcular resumo final primeiro (para ter o totalGeral)
+        this.calculateResumoFinal();
         
-        // Calcular margem de lucro (Bloco 8)
+        // Calcular margem de lucro (Bloco 8) - precisa do totalGeral
         this.calculateMargemLucro();
         
-        // Calcular resumo final
+        // Calcular custos adicionais e tributos (Bloco 7) - sempre, independente do 7.1
+        this.calculateCustosTributos();
+        
+        // Recalcular resumo final após blocos 7 e 8
         this.calculateResumoFinal();
     }
 
@@ -1141,7 +1211,19 @@ class CalculadoraTerceirizacao {
 
     // Calcular custos adicionais e tributos (Bloco 7)
     calculateCustosTributos() {
-        const totalGeralEmpregado = this.calculations.resumo?.totalGeral || 0;
+        // Calcular totalGeralEmpregado diretamente dos campos, não depender de calculations.resumo
+        const salarioBrutoField = document.getElementById('salarioBruto');
+        const totalBloco3Field = document.getElementById('totalBloco3');
+        const totalBloco4Field = document.getElementById('totalBloco4');
+        const totalBloco5Field = document.getElementById('totalBloco5');
+
+        const salarioBruto = salarioBrutoField ? FormValidator.masks.currencyToFloat(salarioBrutoField.value) : 0;
+        const totalBloco3 = totalBloco3Field ? FormValidator.masks.currencyToFloat(totalBloco3Field.value) : 0;
+        const totalBloco4 = totalBloco4Field ? FormValidator.masks.currencyToFloat(totalBloco4Field.value) : 0;
+        const totalBloco5 = totalBloco5Field ? FormValidator.masks.currencyToFloat(totalBloco5Field.value) : 0;
+
+        const totalGeralEmpregado = salarioBruto + totalBloco3 + totalBloco4 + totalBloco5;
+
         const percentualCustosField = document.getElementById('percentualCustosAdicionais');
         const regimeTributario = document.getElementById('regimeTributario').value;
         const isSimples = regimeTributario === 'simples';
