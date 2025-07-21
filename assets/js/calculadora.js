@@ -1270,7 +1270,7 @@ class CalculadoraTerceirizacao {
             encargosLucroPresumido = {
                 inss: baseCalculoLucroPresumido * 0.20,           // 20%
                 salarioEducacao: baseCalculoLucroPresumido * 0.025,  // 2,50%
-                sat: baseCalculoLucroPresumido * 0.0237,             // 2,37%
+                sat: baseCalculoLucroPresumido * 0.03,             // 2,37%
                 sescSesi: baseCalculoLucroPresumido * 0.015,         // 1,50%
                 senaiSenac: baseCalculoLucroPresumido * 0.01,        // 1,00%
                 sebrae: baseCalculoLucroPresumido * 0.006,           // 0,60%
@@ -1632,8 +1632,8 @@ class CalculadoraTerceirizacao {
                 
             } else {
                 // Lucro Presumido/Real - usar PIS/COFINS/ISS
-                pis = baseParaTributos * 0.0059;     // 0,59%
-                cofins = baseParaTributos * 0.0271;  // 2,71%
+                pis = baseParaTributos * 0.0065;     // 0,65%
+                cofins = baseParaTributos * 0.03;  // 3,00%
                 iss = baseParaTributos * 0.05;       // 5,00%
                 totalTributos = pis + cofins + iss;
                 
@@ -1968,7 +1968,7 @@ class CalculadoraTerceirizacao {
             { fieldId: 'inss', originalText: '20,00%' },
             { fieldId: 'fgts', originalText: '8,00%' },
             { fieldId: 'salarioEducacao', originalText: '2,50%' },
-            { fieldId: 'sat', originalText: '2,37%' },
+            { fieldId: 'sat', originalText: '3,00%' },
             { fieldId: 'sescSesi', originalText: '1,50%' },
             { fieldId: 'senaiSenac', originalText: '1,00%' },
             { fieldId: 'sebrae', originalText: '0,60%' },
