@@ -1369,3 +1369,59 @@ select.form-input option {
         margin: 0 auto;
     }
 }
+
+/* Highlighted fields */
+.highlighted {
+    background-color: var(--primary-gold) !important;
+    color: var(--primary-dark) !important;
+    transition: all 0.3s ease;
+}
+
+.highlighted-warning {
+    background-color: #f39c12 !important;
+    color: white !important;
+    border: 2px solid #e67e22 !important;
+    transition: all 0.3s ease;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+    display: flex;
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 0.9rem;
+}
+
+.toggle-switch input[type="radio"] {
+    display: none;
+}
+
+.toggle-option {
+    flex: 1;
+    padding: 8px 16px;
+    text-align: center;
+    cursor: pointer;
+    background-color: #f8f9fa;
+    color: #6c757d;
+    border: none;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.toggle-switch input[type="radio"]:checked + .toggle-option {
+    background-color: var(--primary-dark);
+    color: white;
+    font-weight: 600;
+}
+
+.toggle-option:hover {
+    background-color: var(--primary-gold);
+    color: var(--primary-dark);
+}
+
+.toggle-switch input[type="radio"]:checked + .toggle-option:hover {
+    background-color: var(--primary-dark);
+    color: white;
+}
