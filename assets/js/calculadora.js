@@ -144,7 +144,11 @@ class CalculadoraTerceirizacao {
     constructor() {
         this.formData = {};
         this.calculations = {};
+        this.calculationCache = new Map(); // Cache para cálculos
+        this.validationCache = new Map(); // Cache para validações
         this.isInitialized = false;
+        this.criticalCalculationTimeout = null;
+        this.universalInputTimeout = null; // Para monitoramento universal
         
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', this.init.bind(this));
@@ -331,6 +335,14 @@ class CalculadoraTerceirizacao {
 
     // Event listeners
     setupEventListeners() {
+        // Implementar debouncing para melhorar performance
+        let calculationTimeout = null;
+        
+        const debounceCalculation = (callback, delay = 150) => {
+            clearTimeout(calculationTimeout);
+            calculationTimeout = setTimeout(callback, delay);
+        };
+
         document.addEventListener('input', (e) => {
             if (e.target.classList.contains('form-input')) {
                 // Limpar contornos coloridos quando usuário começar a digitar
@@ -354,92 +366,184 @@ class CalculadoraTerceirizacao {
         const regimeTributarioField = document.getElementById('regimeTributario');
         if (regimeTributarioField) {
             regimeTributarioField.addEventListener('change', () => {
-                // Recalcular tudo quando regime tributário mudar
-                const salarioBrutoField = document.getElementById('salarioBruto');
-                if (salarioBrutoField && salarioBrutoField.value) {
-                    const salarioBruto = FormValidator.masks.currencyToFloat(salarioBrutoField.value);
-                    if (salarioBruto > 0) {
-                        this.calculateEncargos(salarioBruto);
-                    }
-                }
-                
-                // Forçar recálculo dos blocos 7 e 8
-                this.calculateResumoFinal();
-                this.calculateMargemLucro();
-                this.calculateCustosTributos();
-                this.calculateResumoFinal();
-            });
-        }
-
-        // Event listeners específicos para campos que afetam Blocos 7 e 8
-        const percentualMargemField = document.getElementById('percentualMargemLucro');
-        if (percentualMargemField) {
-            percentualMargemField.addEventListener('input', () => {
-                // Recalcular blocos 7 e 8 quando margem mudar
-                setTimeout(() => {
-                    this.calculateResumoFinal();
-                    this.calculateMargemLucro();
-                    this.calculateCustosTributos();
-                    this.calculateResumoFinal();
-                }, 100);
-            });
-        }
-
-        const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
-        if (aliquotaSimplesField) {
-            aliquotaSimplesField.addEventListener('input', () => {
-                // Recalcular tributos quando alíquota mudar
-                setTimeout(() => {
-                    this.calculateMargemLucro();
-                    this.calculateCustosTributos();
-                    this.calculateResumoFinal();
-                }, 100);
-            });
-        }
-
-        const percentualCustosField = document.getElementById('percentualCustosAdicionais');
-        if (percentualCustosField) {
-            percentualCustosField.addEventListener('input', () => {
-                // Recalcular bloco 7 quando custos adicionais mudarem
-                setTimeout(() => {
-                    this.calculateResumoFinal();
-                    this.calculateMargemLucro();
-                    this.calculateCustosTributos();
-                    this.calculateResumoFinal();
-                }, 100);
-            });
-        }
-
-        // Prevenir zoom persistente no mobile
-        document.addEventListener('blur', (e) => {
-            if (e.target.classList.contains('form-input') && this.isMobile()) {
-                // Forçar zoom out no mobile após edição
-                setTimeout(() => {
-                    const viewport = document.querySelector('meta[name="viewport"]');
-                    if (viewport) {
-                        // Força reset do viewport
-                        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                debounceCalculation(() => {
+                    // Recalcular tudo quando regime tributário mudar
+                    const salarioBrutoField = document.getElementById('salarioBruto');
+                    if (salarioBrutoField && salarioBrutoField.value) {
+                        const salarioBruto = FormValidator.masks.currencyToFloat(salarioBrutoField.value);
+                        if (salarioBruto > 0) {
+                            this.calculateEncargos(salarioBruto);
+                        }
                     }
                     
-                    // Scroll suave para cima para "resetar" a visualização
-                    window.scrollTo({
-                        top: window.pageYOffset - 1,
-                        behavior: 'smooth'
-                    });
-                }, 100);
-            }
-        }, true);
+                    // Recalcular blocos 7 e 8
+                    this.calculateResumoFinal();
+                    this.calculateMargemLucro();
+                    this.calculateCustosTributos();
+                    this.calculateResumoFinal();
+                });
+            });
+        }
 
-        // Event listener específico para quantidade (recalcular total múltiplos empregados)
+        // Event listeners otimizados para campos críticos
+        const criticalFields = [
+            { id: 'percentualMargemLucro', delay: 200 },
+            { id: 'aliquotaSimplesNacional', delay: 200 },
+            { id: 'percentualCustosAdicionais', delay: 200 },
+            { id: 'quantidade', delay: 100 }
+        ];
+
+        criticalFields.forEach(({ id, delay }) => {
+            const field = document.getElementById(id);
+            if (field) {
+                field.addEventListener('input', () => {
+                    debounceCalculation(() => {
+                        this.calculateResumoFinal();
+                        this.calculateMargemLucro();
+                        this.calculateCustosTributos();
+                        this.calculateResumoFinal();
+                    }, delay);
+                });
+            }
+        });
+
+        // Event listener específico para quantidade (afeta total múltiplos empregados)
         const quantidadeField = document.getElementById('quantidade');
         if (quantidadeField) {
             quantidadeField.addEventListener('input', () => {
-                // Recalcular resumo final para atualizar total de múltiplos empregados
-                setTimeout(() => {
+                debounceCalculation(() => {
+                    // Quantidade só afeta a exibição do total múltiplo, não os cálculos base
                     this.calculateResumoFinal();
+                    console.log('🔄 Recálculo após mudança na quantidade de empregados');
                 }, 100);
             });
         }
+
+        // Event listeners para reposição de férias
+        const substituirFeriasRadios = document.querySelectorAll('input[name="substituirFerias"]');
+        substituirFeriasRadios.forEach(radio => {
+            radio.addEventListener('change', () => {
+                debounceCalculation(() => {
+                    // Recalcular tudo quando opção de reposição mudar
+                    this.calculateResumoFinal(); // Atualiza Bloco 6 com/sem reposição
+                    this.calculateMargemLucro(); // Recalcula margem com novo total
+                    this.calculateCustosTributos(); // Recalcula tributos
+                    this.calculateResumoFinal(); // Atualiza resumo final
+                    
+                    console.log('🔄 Recálculo completo após mudança na reposição de férias');
+                }, 150);
+            });
+        });
+
+        // Event listeners específicos para campos de custos adicionais
+        for (let i = 1; i <= 5; i++) {
+            const tipoField = document.getElementById(`tipoCusto${i}`);
+            const valorField = document.getElementById(`valorCusto${i}`);
+            
+            if (tipoField) {
+                tipoField.addEventListener('change', () => {
+                    debounceCalculation(() => {
+                        this.calculateCustosAdicionais();
+                        this.debounceCriticalCalculation();
+                        console.log(`🔄 Recálculo após mudança no tipo de custo ${i}`);
+                    }, 100);
+                });
+            }
+            
+            if (valorField) {
+                valorField.addEventListener('input', () => {
+                    debounceCalculation(() => {
+                        this.calculateCustosAdicionais();
+                        this.debounceCriticalCalculation();
+                        console.log(`🔄 Recálculo após mudança no valor de custo ${i}`);
+                    }, 150);
+                });
+            }
+        }
+
+        // Otimizar prevenção de zoom no mobile
+        this.setupMobileOptimizations();
+        
+        // Sistema fail-safe: monitorar TODOS os inputs para garantir que nada seja perdido
+        this.setupUniversalInputMonitoring();
+    }
+    
+    // Sistema universal de monitoramento de inputs
+    setupUniversalInputMonitoring() {
+        // Selecionar TODOS os inputs que não são readonly/calculation-result
+        const allInputs = document.querySelectorAll('input:not(.calculation-result):not([readonly]), select, textarea');
+        
+        console.log(`🔧 Configurando monitoramento universal para ${allInputs.length} campos`);
+        
+        allInputs.forEach(input => {
+            // Verificar se já tem event listener específico
+            const hasSpecificListener = this.hasSpecificEventListener(input.id);
+            
+            if (!hasSpecificListener) {
+                console.log(`➕ Adicionando monitoramento universal para: ${input.id}`);
+                
+                // Event listener universal com debounce
+                const eventType = input.type === 'radio' || input.type === 'checkbox' ? 'change' : 'input';
+                
+                input.addEventListener(eventType, () => {
+                    console.log(`🔄 Mudança detectada (universal): ${input.id} = "${input.value}"`);
+                    
+                    // Usar debounce para evitar sobrecarga
+                    if (this.universalInputTimeout) {
+                        clearTimeout(this.universalInputTimeout);
+                    }
+                    
+                    this.universalInputTimeout = setTimeout(() => {
+                        // Determinar se é um campo crítico
+                        const fieldType = this.getFieldCalculationType(input.id);
+                        
+                        if (fieldType === 'critical') {
+                            this.forceCompleteRecalculation(`Campo crítico universal: ${input.id}`);
+                        } else if (fieldType === 'basic') {
+                            this.updateCalculations();
+                        }
+                        // display-only não faz nada
+                    }, 200);
+                });
+            }
+        });
+    }
+    
+    // Verificar se um campo já tem event listener específico
+    hasSpecificEventListener(fieldId) {
+        const specificFields = [
+            'regimeTributario', 'percentualMargemLucro', 'aliquotaSimplesNacional', 
+            'percentualCustosAdicionais', 'quantidade', 'substituirFerias',
+            'tipoCusto1', 'tipoCusto2', 'tipoCusto3', 'tipoCusto4', 'tipoCusto5',
+            'valorCusto1', 'valorCusto2', 'valorCusto3', 'valorCusto4', 'valorCusto5'
+        ];
+        
+        return specificFields.includes(fieldId) || fieldId.includes('substituirFerias');
+    }
+
+    // Método separado para otimizações mobile
+    setupMobileOptimizations() {
+        if (!this.isMobile()) return;
+
+        // Cache do viewport para evitar múltiplas consultas
+        const viewport = document.querySelector('meta[name="viewport"]');
+        
+        document.addEventListener('blur', (e) => {
+            if (e.target.classList.contains('form-input')) {
+                // Usar requestAnimationFrame para melhor performance
+                requestAnimationFrame(() => {
+                    if (viewport) {
+                        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+                    }
+                    
+                    // Scroll otimizado
+                    window.scrollTo({
+                        top: Math.max(0, window.pageYOffset - 1),
+                        behavior: 'smooth'
+                    });
+                });
+            }
+        }, { passive: true });
     }
 
     // Valores padrão
@@ -500,13 +604,23 @@ class CalculadoraTerceirizacao {
         
         FormValidator.showValidation('cnpj', true, 'CNPJ válido ✓');
         
-        // Buscar dados do CNPJ automaticamente
+        // Buscar dados do CNPJ na BrasilAPI com cache
         this.searchCNPJData(value);
         return true;
     }
 
-    // Buscar dados do CNPJ na BrasilAPI
+    // Buscar dados do CNPJ na BrasilAPI com cache
     async searchCNPJData(cnpj) {
+        const cleanCnpj = cnpj.replace(/\D/g, '');
+        const cacheKey = `cnpj_${cleanCnpj}`;
+        
+        // Verificar cache primeiro
+        if (this.validationCache.has(cacheKey)) {
+            const cachedResult = this.validationCache.get(cacheKey);
+            this.applyCNPJResult(cachedResult);
+            return;
+        }
+
         const loadingIndicator = document.getElementById('cnpj-loading');
         const nomeClienteField = document.getElementById('nomeCliente');
         
@@ -514,11 +628,15 @@ class CalculadoraTerceirizacao {
             // Mostrar loading
             this.showLoading(true);
             
-            // Limpar CNPJ para API (somente números)
-            const cnpjClean = cnpj.replace(/\D/g, '');
-            
             // Fazer requisição para BrasilAPI
-            const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjClean}`);
+            const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+                // Timeout de 10 segundos
+                signal: AbortSignal.timeout(10000)
+            });
             
             if (!response.ok) {
                 throw new Error(`Erro na API: ${response.status}`);
@@ -526,47 +644,76 @@ class CalculadoraTerceirizacao {
             
             const data = await response.json();
             
-            // Verificar se empresa está ativa (código 2 = ATIVA, ou texto "ATIVA")
+            // Validar dados recebidos
+            if (!data || typeof data !== 'object') {
+                throw new Error('Dados inválidos recebidos da API');
+            }
+            
+            // Verificar se empresa está ativa
             const situacaoAtiva = data.situacao_cadastral === 'ATIVA' || 
                                  data.situacao_cadastral === '2' || 
                                  data.situacao_cadastral === 2;
             
-            if (!situacaoAtiva) {
-                const situacaoTexto = this.getSituacaoTexto(data.situacao_cadastral);
-                FormValidator.showValidation('cnpj', false, `Empresa com situação: ${situacaoTexto}`);
-                this.clearClientName();
-                return;
-            }
-            
-            // Preencher nome do cliente
-            const nomeEmpresa = data.razao_social || data.nome_fantasia || 'Nome não encontrado';
-            nomeClienteField.value = nomeEmpresa;
-            
-            // Validação de sucesso
-            FormValidator.showValidation('nomeCliente', true, `Empresa encontrada: ${nomeEmpresa} ✓`);
-            
-            console.log('✅ Dados do CNPJ encontrados:', {
-                razaoSocial: data.razao_social,
-                nomeFantasia: data.nome_fantasia,
+            const result = {
+                success: situacaoAtiva,
+                nomeEmpresa: data.razao_social || data.nome_fantasia || 'Nome não encontrado',
                 situacao: data.situacao_cadastral,
-                cidade: `${data.municipio}/${data.uf}`
-            });
+                data: data
+            };
+            
+            // Salvar no cache (por 5 minutos)
+            this.validationCache.set(cacheKey, result);
+            setTimeout(() => {
+                this.validationCache.delete(cacheKey);
+            }, 5 * 60 * 1000);
+            
+            // Aplicar resultado
+            this.applyCNPJResult(result);
             
         } catch (error) {
             console.error('❌ Erro ao buscar CNPJ:', error);
             
-            if (error.message.includes('404')) {
-                FormValidator.showValidation('cnpj', false, 'CNPJ não encontrado na base de dados.');
+            // Tratamento de erros mais específico
+            let errorMessage = 'Erro na consulta. Verifique sua conexão.';
+            
+            if (error.name === 'TimeoutError') {
+                errorMessage = 'Consulta expirou. Tente novamente.';
+            } else if (error.message.includes('404')) {
+                errorMessage = 'CNPJ não encontrado na base de dados.';
             } else if (error.message.includes('429')) {
-                FormValidator.showValidation('cnpj', false, 'Muitas consultas. Tente novamente em alguns segundos.');
-            } else {
-                FormValidator.showValidation('cnpj', false, 'Erro na consulta. Verifique sua conexão.');
+                errorMessage = 'Muitas consultas. Tente novamente em alguns segundos.';
+            } else if (error.message.includes('Failed to fetch')) {
+                errorMessage = 'Problema de conectividade. Verifique sua internet.';
             }
             
+            FormValidator.showValidation('cnpj', false, errorMessage);
             this.clearClientName();
+            
         } finally {
             // Esconder loading
             this.showLoading(false);
+        }
+    }
+
+    // Aplicar resultado da consulta CNPJ
+    applyCNPJResult(result) {
+        const nomeClienteField = document.getElementById('nomeCliente');
+        
+        if (result.success) {
+            // Preencher nome do cliente
+            nomeClienteField.value = result.nomeEmpresa;
+            FormValidator.showValidation('nomeCliente', true, `Empresa encontrada: ${result.nomeEmpresa} ✓`);
+            
+            console.log('✅ Dados do CNPJ (cache/API):', {
+                razaoSocial: result.data.razao_social,
+                nomeFantasia: result.data.nome_fantasia,
+                situacao: result.situacao,
+                fonte: this.validationCache.has(`cnpj_${result.data.cnpj || ''}`) ? 'cache' : 'api'
+            });
+        } else {
+            const situacaoTexto = this.getSituacaoTexto(result.situacao);
+            FormValidator.showValidation('cnpj', false, `Empresa com situação: ${situacaoTexto}`);
+            this.clearClientName();
         }
     }
 
@@ -871,32 +1018,144 @@ class CalculadoraTerceirizacao {
         return true;
     }
 
-    // Manipulação de dados
+    // Manipulação de dados otimizada
     handleFieldChange(field) {
-        this.formData[field.id] = field.value;
-        this.updateCalculations();
+        // Evitar recálculos desnecessários se valor não mudou
+        const currentValue = field.value;
+        const previousValue = this.formData[field.id];
         
-        // Forçar cálculo dos blocos 7 e 8 sempre que houver mudanças significativas
-        const camposCriticos = [
+        if (currentValue === previousValue) {
+            return; // Não há mudança, evitar recálculo
+        }
+        
+        // Salvar novo valor
+        this.formData[field.id] = currentValue;
+        
+        // Log para debug (pode ser removido em produção)
+        console.log(`📝 Campo alterado: ${field.id} = "${currentValue}"`);
+        
+        // Determinar tipo de recálculo necessário baseado no campo
+        const fieldType = this.getFieldCalculationType(field.id);
+        
+        switch (fieldType) {
+            case 'basic':
+                this.updateCalculations();
+                break;
+            case 'critical':
+                this.updateCalculations();
+                // Para campos críticos, recalcular blocos 7 e 8 com debounce
+                this.debounceCriticalCalculation();
+                console.log(`⚡ Campo crítico alterado: ${field.id} - recálculo completo agendado`);
+                break;
+            case 'display-only':
+                // Campos que só afetam exibição, não necessitam recálculo completo
+                console.log(`🎨 Campo display-only alterado: ${field.id} - sem recálculo`);
+                break;
+            default:
+                this.updateCalculations();
+                console.log(`📊 Campo básico alterado: ${field.id} - recálculo básico`);
+        }
+    }
+    
+    // Classificar tipo de campo para otimizar recálculos
+    getFieldCalculationType(fieldId) {
+        const criticalFields = [
+            // Campos básicos que afetam todos os cálculos
             'salarioBruto', 'valorPassagemDiaria', 'auxilioRefeicaoValorDiario',
-            'regimeTributario', 'percentualMargemLucro', 'percentualCustosAdicionais',
-            'aliquotaSimplesNacional'
+            'regimeTributario', 'quantidade',
+            
+            // Campos de percentuais e alíquotas
+            'percentualMargemLucro', 'percentualCustosAdicionais',
+            'aliquotaSimplesNacional',
+            
+            // Campos de custos adicionais (serão adicionados dinamicamente abaixo)
+            // valorCusto1, valorCusto2, etc.
+            
+            // Campos que podem afetar cálculos indiretos
+            'tipoCusto1', 'tipoCusto2', 'tipoCusto3', 'tipoCusto4', 'tipoCusto5'
         ];
         
-        // Para campos de custos adicionais também
+        const displayOnlyFields = [
+            'nomeCliente', 'cnpj', 'responsavelProposta', 'cargo', 'dataBase'
+        ];
+        
+        // Adicionar campos de custos adicionais aos críticos
         for (let i = 1; i <= 5; i++) {
-            camposCriticos.push(`valorCusto${i}`);
+            criticalFields.push(`valorCusto${i}`);
         }
         
-        if (camposCriticos.includes(field.id)) {
-            // Aguardar um pouco para garantir que outros cálculos terminaram
-            setTimeout(() => {
-                this.calculateResumoFinal();
-                this.calculateMargemLucro();
-                this.calculateCustosTributos();
-                this.calculateResumoFinal();
-            }, 150);
+        if (criticalFields.includes(fieldId)) {
+            return 'critical';
+        } else if (displayOnlyFields.includes(fieldId)) {
+            return 'display-only';
+        } else {
+            // Campos não classificados são tratados como básicos
+            return 'basic';
         }
+    }
+    
+    // Debounce para cálculos críticos
+    debounceCriticalCalculation() {
+        if (this.criticalCalculationTimeout) {
+            clearTimeout(this.criticalCalculationTimeout);
+        }
+        
+        this.criticalCalculationTimeout = setTimeout(() => {
+            console.log('🔄 Iniciando recálculo crítico completo...');
+            
+            // Sequência de recálculo na ordem correta
+            this.calculateResumoFinal();      // 1. Atualizar resumo (Bloco 6)
+            this.calculateMargemLucro();      // 2. Recalcular margem (Bloco 8)
+            this.calculateCustosTributos();   // 3. Recalcular tributos (Bloco 7)
+            this.calculateResumoFinal();      // 4. Atualizar resumo final (Bloco 9)
+            
+            console.log('✅ Recálculo crítico completo finalizado');
+        }, 200);
+    }
+
+    // === MÉTODOS AUXILIARES PARA PERFORMANCE ===
+
+    // Limpar cache quando necessário
+    clearCache(type = 'all') {
+        if (type === 'all' || type === 'calculations') {
+            this.calculationCache.clear();
+        }
+        if (type === 'all' || type === 'validations') {
+            this.validationCache.clear();
+        }
+        console.log(`🧹 Cache limpo: ${type}`);
+    }
+
+    // Cache para cálculos complexos
+    getCachedCalculation(key, calculator) {
+        if (this.calculationCache.has(key)) {
+            return this.calculationCache.get(key);
+        }
+        
+        const result = calculator();
+        this.calculationCache.set(key, result);
+        return result;
+    }
+
+    // Verificar se recálculo é necessário
+    shouldRecalculate(fieldId, newValue) {
+        return this.formData[fieldId] !== newValue;
+    }
+
+    // Força recálculo completo (método público para uso quando necessário)
+    forceCompleteRecalculation(reason = 'Manual') {
+        console.log(`🔄 Força recálculo completo - Motivo: ${reason}`);
+        
+        // Limpar cache para forçar recálculo
+        this.clearCache('calculations');
+        
+        // Executar sequência completa
+        this.calculateResumoFinal();
+        this.calculateMargemLucro();
+        this.calculateCustosTributos();
+        this.calculateResumoFinal();
+        
+        console.log('✅ Força recálculo completo finalizado');
     }
 
     updateCalculations() {
@@ -1297,25 +1556,21 @@ class CalculadoraTerceirizacao {
 
     // Calcular custos adicionais e tributos (Bloco 7)
     calculateCustosTributos() {
-        // Calcular totalGeralEmpregado diretamente dos campos, não depender de calculations.resumo
-        const salarioBrutoField = document.getElementById('salarioBruto');
-        const totalBloco3Field = document.getElementById('totalBloco3');
-        const totalBloco4Field = document.getElementById('totalBloco4');
-        const totalBloco5Field = document.getElementById('totalBloco5');
-
-        const salarioBruto = salarioBrutoField ? FormValidator.masks.currencyToFloat(salarioBrutoField.value) : 0;
-        const totalBloco3 = totalBloco3Field ? FormValidator.masks.currencyToFloat(totalBloco3Field.value) : 0;
-        const totalBloco4 = totalBloco4Field ? FormValidator.masks.currencyToFloat(totalBloco4Field.value) : 0;
-        const totalBloco5 = totalBloco5Field ? FormValidator.masks.currencyToFloat(totalBloco5Field.value) : 0;
-
-        const totalGeralEmpregado = salarioBruto + totalBloco3 + totalBloco4 + totalBloco5;
+        // Usar o valor do campo "Total p/ empregado antes de impostos e margem" do Bloco 6
+        // para calcular os Custos Adicionais (7.1)
+        const resumoTotalGeralField = document.getElementById('resumoTotalGeral');
+        const totalBloco6 = resumoTotalGeralField ? FormValidator.masks.currencyToFloat(resumoTotalGeralField.value) : 0;
+        
+        // Para tributos, usar a Base de Cálculo para Tributos se disponível
+        const baseCalculoTributosField = document.getElementById('baseCalculoTributos');
+        const baseCalculoTributos = baseCalculoTributosField ? FormValidator.masks.currencyToFloat(baseCalculoTributosField.value) : 0;
 
         const percentualCustosField = document.getElementById('percentualCustosAdicionais');
         const regimeTributario = document.getElementById('regimeTributario').value;
         const isSimples = regimeTributario === 'simples';
         
-        // Se não há total geral, limpar tudo
-        if (totalGeralEmpregado <= 0) {
+        // Se não há valores, limpar tudo
+        if (totalBloco6 <= 0) {
             this.updateCalculationField('valorCustosAdicionais', 0);
             this.updateCalculationField('pis', 0);
             this.updateCalculationField('cofins', 0);
@@ -1327,7 +1582,7 @@ class CalculadoraTerceirizacao {
             return;
         }
 
-        // 7.1 - Custos Adicionais (opcional)
+        // 7.1 - Custos Adicionais (calculados sobre o Total p/ empregado antes de impostos e margem)
         let valorCustosAdicionais = 0;
         let percentualCustos = 0;
 
@@ -1337,7 +1592,7 @@ class CalculadoraTerceirizacao {
             percentualCustos = parseFloat(cleanValue) / 100;
             
             if (!isNaN(percentualCustos) && percentualCustos >= 0) {
-                valorCustosAdicionais = totalGeralEmpregado * percentualCustos;
+                valorCustosAdicionais = totalBloco6 * percentualCustos;
             }
         }
 
@@ -1345,12 +1600,12 @@ class CalculadoraTerceirizacao {
         this.updateCalculationField('valorCustosAdicionais', valorCustosAdicionais);
         this.updateCalculationField('totalSubmodulo71', valorCustosAdicionais);
 
-        // 7.2 - Tributos (calculados sobre a base que será definida no Bloco 8)
-        const baseCalculoTributos = this.calculations.margemLucro?.baseCalculoTributos || 0;
+        // 7.2 - Tributos (calculados sobre a base de cálculo para tributos)
+        const baseParaTributos = baseCalculoTributos > 0 ? baseCalculoTributos : 0;
         
         let pis = 0, cofins = 0, iss = 0, tributoSimplesNacional = 0, totalTributos = 0;
 
-        if (baseCalculoTributos > 0) {
+        if (baseParaTributos > 0) {
             if (isSimples) {
                 // Simples Nacional - usar alíquota informada pelo usuário
                 const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
@@ -1359,7 +1614,7 @@ class CalculadoraTerceirizacao {
                     const aliquotaSimples = parseFloat(cleanAliquota) / 100;
                     
                     if (!isNaN(aliquotaSimples)) {
-                        tributoSimplesNacional = baseCalculoTributos * aliquotaSimples;
+                        tributoSimplesNacional = baseParaTributos * aliquotaSimples;
                         totalTributos = tributoSimplesNacional;
                         
                         // Atualizar percentual exibido
@@ -1377,9 +1632,9 @@ class CalculadoraTerceirizacao {
                 
             } else {
                 // Lucro Presumido/Real - usar PIS/COFINS/ISS
-                pis = baseCalculoTributos * 0.0059;     // 0,59%
-                cofins = baseCalculoTributos * 0.0271;  // 2,71%
-                iss = baseCalculoTributos * 0.05;       // 5,00%
+                pis = baseParaTributos * 0.0059;     // 0,59%
+                cofins = baseParaTributos * 0.0271;  // 2,71%
+                iss = baseParaTributos * 0.05;       // 5,00%
                 totalTributos = pis + cofins + iss;
                 
                 // Atualizar campos do Lucro Presumido
@@ -1416,22 +1671,32 @@ class CalculadoraTerceirizacao {
             tributoSimplesNacional: tributoSimplesNacional,
             totalTributos: totalTributos,
             totalBloco7: totalBloco7,
-            baseCalculoTributos: baseCalculoTributos,
+            baseCalculoTributos: baseParaTributos,
+            totalBloco6: totalBloco6,
             regimeSimples: isSimples
         };
 
-        console.log('✅ Custos e tributos calculados:', this.calculations.custosTributos);
+        console.log('✅ Custos calculados sobre Bloco 6, tributos sobre Base:', {
+            totalBloco6: this.formatCurrency(totalBloco6),
+            percentualCustos: `${(percentualCustos * 100).toFixed(2).replace('.', ',')}%`,
+            valorCustosAdicionais: this.formatCurrency(valorCustosAdicionais),
+            baseCalculoTributos: this.formatCurrency(baseParaTributos),
+            totalTributos: this.formatCurrency(totalTributos),
+            totalBloco7: this.formatCurrency(totalBloco7)
+        });
     }
 
-    // Calcular margem de lucro (Bloco 8) com lógica reversa
+    // Calcular margem de lucro (Bloco 8) com lógica correta
     calculateMargemLucro() {
-        const totalGeralEmpregado = this.calculations.resumo?.totalGeral || 0;
-        const custosTributos = this.calculations.custosTributos || {};
+        // Obter total do bloco 6 (antes de impostos e margem)
+        const totalBloco6Field = document.getElementById('resumoTotalGeral');
+        const totalBloco6 = totalBloco6Field ? FormValidator.masks.currencyToFloat(totalBloco6Field.value) : 0;
+        
         const percentualMargemField = document.getElementById('percentualMargemLucro');
         const regimeTributario = document.getElementById('regimeTributario').value;
         const isSimples = regimeTributario === 'simples';
         
-        if (!percentualMargemField || !percentualMargemField.value || totalGeralEmpregado <= 0) {
+        if (!percentualMargemField || !percentualMargemField.value || totalBloco6 <= 0) {
             // Limpar campos se não houver dados
             this.updateCalculationField('valorMargemLucro', 0);
             this.updateCalculationField('valorTotalComMargem', 0);
@@ -1443,9 +1708,17 @@ class CalculadoraTerceirizacao {
         const cleanValue = percentualMargemField.value.replace('%', '').replace(',', '.');
         const percentualMargem = parseFloat(cleanValue) / 100;
 
+        // Obter percentual de custos adicionais (7.1)
+        const percentualCustosField = document.getElementById('percentualCustosAdicionais');
+        let percentualCustos = 0;
+        if (percentualCustosField && percentualCustosField.value && percentualCustosField.value.trim() !== '') {
+            const cleanCustos = percentualCustosField.value.replace('%', '').replace(',', '.');
+            percentualCustos = parseFloat(cleanCustos) / 100;
+            if (isNaN(percentualCustos)) percentualCustos = 0;
+        }
+
         // Determinar taxa de tributos baseada no regime
         let taxaTributos = 0;
-        
         if (isSimples) {
             // Simples Nacional - usar alíquota informada pelo usuário
             const aliquotaSimplesField = document.getElementById('aliquotaSimplesNacional');
@@ -1461,48 +1734,101 @@ class CalculadoraTerceirizacao {
             taxaTributos = 0.0059 + 0.0271 + 0.05; // 8,30%
         }
 
-        // Cálculo reverso da margem considerando tributos
-        // Fórmula: Base = (Custos + Custos Adicionais) / (1 - Margem - Taxa de Tributos)
-        const custosTotais = totalGeralEmpregado + (custosTributos.valorCustosAdicionais || 0);
-        
-        const baseCalculoTributos = custosTotais / (1 - percentualMargem - taxaTributos);
-        
-        // Valores finais
-        const tributosFinal = baseCalculoTributos * taxaTributos;
-        const valorMargemLucro = baseCalculoTributos * percentualMargem;
-        const valorTotalComMargem = custosTotais + tributosFinal + valorMargemLucro;
+        // LÓGICA CORRETA DA MARGEM:
+        // A margem de X% deve ser calculada sobre o TOTAL DE CUSTOS
+        // Fórmula: ValorNF = TotalCustos × (1 + %Margem) / (1 - %Impostos)
 
-        // Atualizar campos
+        // Calcular total de custos
+        const custosAdicionaisFixos = totalBloco6 * percentualCustos;
+        const totalCustos = totalBloco6 + custosAdicionaisFixos;
+        
+        // Margem desejada sobre o total de custos
+        const margemDesejada = totalCustos * percentualMargem;
+
+        // Validar denominador
+        const denominador = 1 - taxaTributos;
+        if (denominador <= 0) {
+            console.error('❌ Erro: A taxa de tributos é maior ou igual a 100%');
+            this.clearMargemFields();
+            return;
+        }
+
+        // Calcular valor da NF (Base de Cálculo para Tributos)
+        const baseCalculoTributos = totalCustos * (1 + percentualMargem) / denominador;
+        
+        // Calcular valores finais
+        const tributos = baseCalculoTributos * taxaTributos;
+        const valorMargemLucro = margemDesejada;
+        const valorTotalComMargem = baseCalculoTributos;
+
+        // Atualizar campos na interface
         this.updateCalculationField('baseCalculoTributos', baseCalculoTributos);
         this.updateCalculationField('valorMargemLucro', valorMargemLucro);
         this.updateCalculationField('valorTotalComMargem', valorTotalComMargem);
 
-        // Salvar nos cálculos
+        // Salvar dados nos cálculos
         this.calculations.margemLucro = {
+            totalBloco6: totalBloco6,
             percentualMargem: percentualMargem,
-            custosTotais: custosTotais,
+            percentualCustos: percentualCustos,
             taxaTributos: taxaTributos,
+            custosAdicionaisFixos: custosAdicionaisFixos,
+            totalCustos: totalCustos,
+            margemDesejada: margemDesejada,
             baseCalculoTributos: baseCalculoTributos,
-            tributosFinal: tributosFinal,
+            tributos: tributos,
             valorMargemLucro: valorMargemLucro,
             valorTotalComMargem: valorTotalComMargem,
             regimeSimples: isSimples
         };
 
-        console.log('✅ Margem de lucro calculada:', {
-            regime: isSimples ? 'Simples Nacional' : 'Lucro Presumido/Real',
-            percentualMargem: `${(percentualMargem * 100).toFixed(2).replace('.', ',')}%`,
-            taxaTributos: `${(taxaTributos * 100).toFixed(2).replace('.', ',')}%`,
-            custosTotais: this.formatCurrency(custosTotais),
-            baseCalculoTributos: this.formatCurrency(baseCalculoTributos),
-            tributosFinal: this.formatCurrency(tributosFinal),
-            valorMargemLucro: this.formatCurrency(valorMargemLucro),
-            valorTotal: this.formatCurrency(valorTotalComMargem),
-            margemRealizada: `${((valorMargemLucro / valorTotalComMargem) * 100).toFixed(2).replace('.', ',')}%`
-        });
+        // Log detalhado para verificação
+        this.logMargemCalculation();
 
         // Recalcular tributos com a nova base
         this.calculateCustosTributos();
+    }
+
+    // Método auxiliar para limpar campos da margem
+    clearMargemFields() {
+        this.updateCalculationField('valorMargemLucro', 0);
+        this.updateCalculationField('valorTotalComMargem', 0);
+        this.updateCalculationField('baseCalculoTributos', 0);
+    }
+
+    // Método auxiliar para log da margem
+    logMargemCalculation() {
+        const calcs = this.calculations.margemLucro;
+        if (!calcs) return;
+
+        console.log('✅ Margem calculada sobre custos (fórmula correta):', {
+            regime: calcs.regimeSimples ? 'Simples Nacional' : 'Lucro Presumido/Real',
+            entrada: {
+                totalBloco6: this.formatCurrency(calcs.totalBloco6),
+                percentualCustos: `${(calcs.percentualCustos * 100).toFixed(2).replace('.', ',')}%`,
+                custosAdicionais: this.formatCurrency(calcs.custosAdicionaisFixos),
+                totalCustos: this.formatCurrency(calcs.totalCustos),
+                percentualMargem: `${(calcs.percentualMargem * 100).toFixed(2).replace('.', ',')}%`,
+                margemDesejada: this.formatCurrency(calcs.margemDesejada)
+            },
+            calculo: {
+                percentualTributos: `${(calcs.taxaTributos * 100).toFixed(2).replace('.', ',')}%`,
+                denominador: (1 - calcs.taxaTributos).toFixed(4),
+                baseCalculoTributos: this.formatCurrency(calcs.baseCalculoTributos),
+                tributos: this.formatCurrency(calcs.tributos),
+                margemLucro: this.formatCurrency(calcs.valorMargemLucro)
+            },
+            verificacao: {
+                formula: 'ValorNF - Tributos - TotalCustos = Margem',
+                valorNF: this.formatCurrency(calcs.baseCalculoTributos),
+                menosTributos: this.formatCurrency(-calcs.tributos),
+                menosCustos: this.formatCurrency(-calcs.totalCustos),
+                resultado: this.formatCurrency(calcs.baseCalculoTributos - calcs.tributos - calcs.totalCustos),
+                margemEsperada: this.formatCurrency(calcs.margemDesejada),
+                diferenca: this.formatCurrency(Math.abs((calcs.baseCalculoTributos - calcs.tributos - calcs.totalCustos) - calcs.margemDesejada)),
+                percentualReal: `${((calcs.valorMargemLucro / calcs.totalCustos) * 100).toFixed(2).replace('.', ',')}%`
+            }
+        });
     }
 
     // Atualizar campo calculado
@@ -1662,8 +1988,25 @@ class CalculadoraTerceirizacao {
         });
     }
 
-    // Limpar formulário
+    // Limpar formulário otimizado
     clearForm() {
+        // Limpar cache para evitar dados obsoletos
+        this.clearCache();
+        
+        // Cancelar TODOS os timeouts pendentes
+        if (this.criticalCalculationTimeout) {
+            clearTimeout(this.criticalCalculationTimeout);
+            this.criticalCalculationTimeout = null;
+        }
+        
+        if (this.universalInputTimeout) {
+            clearTimeout(this.universalInputTimeout);
+            this.universalInputTimeout = null;
+        }
+        
+        // Usar DocumentFragment para melhor performance
+        const fragment = document.createDocumentFragment();
+        
         const fields = document.querySelectorAll('.form-input');
         fields.forEach(field => {
             if (!field.classList.contains('calculation-result')) {
@@ -1675,10 +2018,11 @@ class CalculadoraTerceirizacao {
                     field.setAttribute('readonly', '');
                 }
             }
-            // Campos calculados mantêm "R$ 0,00" - não alteramos o valor
+            // Limpar classes de status
             field.classList.remove('error', 'success', 'highlighted');
         });
         
+        // Limpar mensagens de validação de forma eficiente
         const validations = document.querySelectorAll('.validation-message');
         validations.forEach(validation => {
             // Limpar timeout se existir
@@ -1696,11 +2040,14 @@ class CalculadoraTerceirizacao {
         // Resetar percentuais para valores originais
         this.resetPercentageDisplays();
         
-        // Limpar cálculos
+        // Limpar dados de forma eficiente
         this.calculations = {};
         this.formData = {};
         
+        // Definir valores padrão
         this.setDefaultValues();
+        
+        console.log('🧹 Formulário limpo e resetado');
     }
 
     // Calcular resumo final - ÚNICA FUNÇÃO DE RESUMO
@@ -1722,8 +2069,35 @@ class CalculadoraTerceirizacao {
         const resumoCustosTributos = totalBloco7Field ? FormValidator.masks.currencyToFloat(totalBloco7Field.value) : 0;
         const resumoMargemLucro = valorMargemLucroField ? FormValidator.masks.currencyToFloat(valorMargemLucroField.value) : 0;
 
-        const resumoTotalGeralFinal = resumoSalarioBruto + resumoEncargos + resumoProvisaoRescisao + 
-                                     resumoCustosAdicionais + resumoCustosTributos + resumoMargemLucro;
+        // Calcular total ANTES da reposição de férias (para uso no cálculo da reposição)
+        const totalAntesReposicao = resumoSalarioBruto + resumoEncargos + resumoProvisaoRescisao + resumoCustosAdicionais;
+
+        // Verificar se deve calcular reposição de férias
+        const substituirFeriasSim = document.getElementById('substituirFeriasSim');
+        const calcularReposicao = substituirFeriasSim && substituirFeriasSim.checked;
+        
+        let valorReposicaoFerias = 0;
+        if (calcularReposicao && totalAntesReposicao > 0) {
+            valorReposicaoFerias = totalAntesReposicao / 12; // Dividir por 12 conforme solicitado
+        }
+
+        // Atualizar campo de reposição de férias
+        const reposicaoFeriasField = document.getElementById('reposicaoFerias');
+        if (reposicaoFeriasField) {
+            reposicaoFeriasField.value = this.formatCurrency(valorReposicaoFerias);
+        }
+
+        // Calcular total final INCLUINDO a reposição de férias
+        const resumoTotalGeral = totalAntesReposicao + valorReposicaoFerias;
+
+        // Para o total final do bloco 9, usar o "Valor Total com Margem" se disponível
+        const valorTotalComMargemField = document.getElementById('valorTotalComMargem');
+        const valorTotalComMargem = valorTotalComMargemField ? FormValidator.masks.currencyToFloat(valorTotalComMargemField.value) : 0;
+        
+        // Se há margem calculada, usar esse valor. Senão, somar manualmente
+        const resumoTotalGeralFinal = valorTotalComMargem > 0 ? valorTotalComMargem : 
+                                     resumoSalarioBruto + resumoEncargos + resumoProvisaoRescisao + 
+                                     resumoCustosAdicionais + valorReposicaoFerias + resumoCustosTributos + resumoMargemLucro;
 
         // Atualizar campos do resumo final (Bloco 9) diretamente
         const resumoFinalSalarioBrutoField = document.getElementById('resumoFinalSalarioBruto');
@@ -1737,19 +2111,17 @@ class CalculadoraTerceirizacao {
         if (resumoFinalSalarioBrutoField) resumoFinalSalarioBrutoField.value = this.formatCurrency(resumoSalarioBruto);
         if (resumoFinalEncargosField) resumoFinalEncargosField.value = this.formatCurrency(resumoEncargos);
         if (resumoFinalProvisaoRescisaoField) resumoFinalProvisaoRescisaoField.value = this.formatCurrency(resumoProvisaoRescisao);
-        if (resumoFinalCustosAdicionaisField) resumoFinalCustosAdicionaisField.value = this.formatCurrency(resumoCustosAdicionais);
+        if (resumoFinalCustosAdicionaisField) resumoFinalCustosAdicionaisField.value = this.formatCurrency(resumoCustosAdicionais + valorReposicaoFerias);
         if (resumoFinalCustosTributosField) resumoFinalCustosTributosField.value = this.formatCurrency(resumoCustosTributos);
         if (resumoFinalMargemLucroField) resumoFinalMargemLucroField.value = this.formatCurrency(resumoMargemLucro);
         if (resumoFinalTotalGeralField) resumoFinalTotalGeralField.value = this.formatCurrency(resumoTotalGeralFinal);
 
-        // Atualizar campos do resumo intermediário (Bloco 6 - sem blocos 7 e 8)
+        // Atualizar campos do resumo intermediário (Bloco 6)
         const resumoSalarioBrutoField = document.getElementById('resumoSalarioBruto');
         const resumoEncargosField = document.getElementById('resumoEncargos');
         const resumoProvisaoRescisaoField = document.getElementById('resumoProvisaoRescisao');
         const resumoCustosAdicionaisField = document.getElementById('resumoCustosAdicionais');
         const resumoTotalGeralField = document.getElementById('resumoTotalGeral');
-
-        const resumoTotalGeral = resumoSalarioBruto + resumoEncargos + resumoProvisaoRescisao + resumoCustosAdicionais;
 
         if (resumoSalarioBrutoField) resumoSalarioBrutoField.value = this.formatCurrency(resumoSalarioBruto);
         if (resumoEncargosField) resumoEncargosField.value = this.formatCurrency(resumoEncargos);
@@ -1757,13 +2129,15 @@ class CalculadoraTerceirizacao {
         if (resumoCustosAdicionaisField) resumoCustosAdicionaisField.value = this.formatCurrency(resumoCustosAdicionais);
         if (resumoTotalGeralField) resumoTotalGeralField.value = this.formatCurrency(resumoTotalGeral);
 
-        // Salvar para uso interno nos cálculos dos blocos 7 e 8
+        // Salvar para uso interno nos cálculos dos blocos 7 e 8 (SEM reposição para não afetar cálculos de tributos)
         this.calculations.resumo = {
             salarioBruto: resumoSalarioBruto,
             encargos: resumoEncargos,
             provisaoRescisao: resumoProvisaoRescisao,
             custosAdicionais: resumoCustosAdicionais,
-            totalGeral: resumoSalarioBruto + resumoEncargos + resumoProvisaoRescisao + resumoCustosAdicionais
+            totalGeral: totalAntesReposicao, // Usar total ANTES da reposição para cálculos de margem e tributos
+            reposicaoFerias: valorReposicaoFerias,
+            totalComReposicao: resumoTotalGeral
         };
 
         this.calculations.resumoFinal = {
@@ -1771,6 +2145,7 @@ class CalculadoraTerceirizacao {
             encargos: resumoEncargos,
             provisaoRescisao: resumoProvisaoRescisao,
             custosAdicionais: resumoCustosAdicionais,
+            reposicaoFerias: valorReposicaoFerias,
             custosTributos: resumoCustosTributos,
             margemLucro: resumoMargemLucro,
             totalGeralFinal: resumoTotalGeralFinal
@@ -1781,6 +2156,8 @@ class CalculadoraTerceirizacao {
             encargos: this.formatCurrency(resumoEncargos),
             provisao: this.formatCurrency(resumoProvisaoRescisao),
             custosAdicionais: this.formatCurrency(resumoCustosAdicionais),
+            reposicaoFerias: this.formatCurrency(valorReposicaoFerias),
+            totalAntesImpostos: this.formatCurrency(resumoTotalGeral),
             custosTributos: this.formatCurrency(resumoCustosTributos),
             margemLucro: this.formatCurrency(resumoMargemLucro),
             total: this.formatCurrency(resumoTotalGeralFinal)
@@ -2337,7 +2714,8 @@ class FileExporter {
             'Total Encargos e Benefícios Anuais, Mensais e Diários',
             'Total Provisão para Rescisão',
             'Total Benefícios/Despesas Adicionais',
-            'TOTAL GERAL POR EMPREGADO',
+            'Reposição nas férias',
+            'Total p/ empregado antes de impostos e margem',
             'Percentual de Custos Adicionais',
             'Valor dos Custos Adicionais',
             'PIS',
@@ -2378,14 +2756,50 @@ class FileExporter {
                     case 'Total Benefícios/Despesas Adicionais':
                         value = document.getElementById('resumoCustosAdicionais')?.value || '';
                         break;
-                    case 'TOTAL GERAL POR EMPREGADO':
+                    case 'Reposição nas férias':
+                        value = document.getElementById('reposicaoFerias')?.value || '';
+                        break;
+                    case 'Total p/ empregado antes de impostos e margem':
                         value = document.getElementById('resumoTotalGeral')?.value || '';
                         break;
-                    case 'Total por empregado':
-                        value = document.getElementById('resumoFinalTotalGeral')?.value || '';
+                    case 'Percentual de Custos Adicionais':
+                        value = document.getElementById('percentualCustosAdicionais')?.value || '';
+                        break;
+                    case 'Valor dos Custos Adicionais':
+                        value = document.getElementById('valorCustosAdicionais')?.value || '';
+                        break;
+                    case 'PIS':
+                        value = document.getElementById('pis')?.value || '';
+                        break;
+                    case 'COFINS':
+                        value = document.getElementById('cofins')?.value || '';
+                        break;
+                    case 'ISS':
+                        value = document.getElementById('iss')?.value || '';
+                        break;
+                    case 'Alíquota do Simples Nacional':
+                        value = document.getElementById('aliquotaSimplesNacional')?.value || '';
+                        break;
+                    case 'Valor do Tributo Simples Nacional':
+                        value = document.getElementById('tributoSimplesNacional')?.value || '';
+                        break;
+                    case 'Percentual de Margem de Lucro':
+                        value = document.getElementById('percentualMargemLucro')?.value || '';
+                        break;
+                    case 'Valor Total com Margem':
+                        value = document.getElementById('valorTotalComMargem')?.value || '';
+                        break;
+                    case 'Base de Cálculo para Tributos':
+                        value = document.getElementById('baseCalculoTributos')?.value || '';
                         break;
                     case 'Custos Adicionais e Tributos':
                         value = document.getElementById('resumoFinalCustosTributos')?.value || '';
+                        break;
+                    case 'Margem de Lucro':
+                        value = document.getElementById('valorMargemLucro')?.value || '';
+                        break;
+                    case 'Total por empregado':
+                        value = document.getElementById('resumoFinalTotalGeral')?.value || '';
                         break;
                     case 'Desconto Funcionário (6% do Salário Bruto)':
                         const desconto = document.getElementById('descontoFuncionario')?.value || '';
