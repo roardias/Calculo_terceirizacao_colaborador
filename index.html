@@ -155,6 +155,17 @@
                     >
                     <div class="validation-message" id="dataBase-validation"></div>
                 </div>
+
+                <div class="form-group">
+                    <label for="substituirFerias" class="form-label">Substituir colaborador durante período de férias?</label>
+                    <div class="toggle-switch">
+                        <input type="radio" id="substituirFeriasNao" name="substituirFerias" value="nao" checked>
+                        <label for="substituirFeriasNao" class="toggle-option">Não</label>
+                        
+                        <input type="radio" id="substituirFeriasSim" name="substituirFerias" value="sim">
+                        <label for="substituirFeriasSim" class="toggle-option">Sim</label>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -583,7 +594,12 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label"><strong>TOTAL GERAL<br>POR EMPREGADO</strong></label>
+                    <label class="form-label">Reposição nas<br>férias</label>
+                    <input type="text" id="reposicaoFerias" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label"><strong>Total p/ empregado<br>antes de impostos e margem</strong></label>
                     <input type="text" id="resumoTotalGeral" class="form-input calculation-result highlighted-final" readonly value="R$ 0,00" style="font-weight: bold; font-size: 1.1rem; border-width: 3px;">
                 </div>
             </div>
